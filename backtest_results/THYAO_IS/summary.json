@@ -1,0 +1,21 @@
+{
+  "ticker": "THYAO.IS",
+  "start": "2022-03-22",
+  "end": "2026-09-18",
+  "model_trained_at": "2026-09-18T19:04:12.332558",
+  "strictly_post_training_dates": false,
+  "evaluation_type": "fixed_model_historical_replay",
+  "feature_count": 18,
+  "sharpe_252_sessions": 0.9402852901403459,
+  "max_drawdown": 0.012072209101280817,
+  "cagr_252_sessions": 0.01279238928824622,
+  "closed_trade_win_rate": 0.6451612903225806,
+  "closed_trades": 31,
+  "final_equity_try": 1058174.1478140058,
+  "signal_coverage": 0.2925958965209634,
+  "long_target_coverage": 0.036574487065120426,
+  "probability_std": 0.0437506725958483,
+  "execution": "next_open_long_only",
+  "payoff_ratio_assumption": 1.5,
+  "commission": 0.0004
+}

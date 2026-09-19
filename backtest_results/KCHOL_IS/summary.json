@@ -1,0 +1,21 @@
+{
+  "ticker": "KCHOL.IS",
+  "start": "2022-03-22",
+  "end": "2026-09-18",
+  "model_trained_at": "2026-09-18T19:04:12.332558",
+  "strictly_post_training_dates": false,
+  "evaluation_type": "fixed_model_historical_replay",
+  "feature_count": 18,
+  "sharpe_252_sessions": 1.0036764360048895,
+  "max_drawdown": 0.009542841282744408,
+  "cagr_252_sessions": 0.01298281550516367,
+  "closed_trade_win_rate": 0.5833333333333334,
+  "closed_trades": 36,
+  "final_equity_try": 1059059.4862535708,
+  "signal_coverage": 0.2649420160570919,
+  "long_target_coverage": 0.04817127564674398,
+  "probability_std": 0.04435713720756425,
+  "execution": "next_open_long_only",
+  "payoff_ratio_assumption": 1.5,
+  "commission": 0.0004
+}

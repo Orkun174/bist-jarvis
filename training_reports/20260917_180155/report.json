@@ -1,0 +1,177 @@
+{
+  "log_loss": 0.6088537460951962,
+  "brier_score": 0.20904626091333545,
+  "roc_auc": 0.5,
+  "baseline_log_loss": 0.6184109807273382,
+  "baseline_brier_score": 0.213340345302004,
+  "split_date": "2025-09-26",
+  "training_rows": 26407,
+  "validation_rows": 6571,
+  "training_positive_rate": 0.36338849547468477,
+  "validation_positive_rate": 0.29751940343935473,
+  "selection": {
+    "selected": "recent:full:sigmoid",
+    "fold_log_losses": {
+      "shallow:full:identity": [
+        0.6620127579908617,
+        0.6304621600637045,
+        0.6334725569460635
+      ],
+      "shallow:full:sigmoid": [
+        0.659851980583426,
+        0.6210705173748261,
+        0.6210518097421677
+      ],
+      "shallow:local:identity": [
+        0.6601377998274965,
+        0.6278849464976952,
+        0.6372112287224918
+      ],
+      "shallow:local:sigmoid": [
+        0.6612640641614046,
+        0.6210730853746146,
+        0.6252358864895868
+      ],
+      "regularized:full:identity": [
+        0.6703601001668023,
+        0.6304425324511388,
+        0.6320963293165205
+      ],
+      "regularized:full:sigmoid": [
+        0.6598519725375852,
+        0.6215854631861116,
+        0.6220548231089569
+      ],
+      "regularized:local:identity": [
+        0.6616658429519783,
+        0.6271525710425365,
+        0.6415384242975127
+      ],
+      "regularized:local:sigmoid": [
+        0.662143471441107,
+        0.6210716704851394,
+        0.6298102824063182
+      ],
+      "recent:full:identity": [
+        0.6703601001668023,
+        0.6304425324511388,
+        0.6323688783540498
+      ],
+      "recent:full:sigmoid": [
+        0.6598519725375852,
+        0.6215854631861116,
+        0.6201759029823211
+      ],
+      "recent:local:identity": [
+        0.6616658429519783,
+        0.6271525710425365,
+        0.6465579448675828
+      ],
+      "recent:local:sigmoid": [
+        0.662143471441107,
+        0.6210716704851394,
+        0.6305865699130998
+      ]
+    },
+    "ranking": [
+      "recent:full:sigmoid",
+      "shallow:full:sigmoid",
+      "regularized:full:sigmoid",
+      "shallow:local:sigmoid",
+      "regularized:local:sigmoid",
+      "recent:local:sigmoid",
+      "shallow:local:identity",
+      "shallow:full:identity",
+      "regularized:local:identity",
+      "regularized:full:identity",
+      "recent:full:identity",
+      "recent:local:identity"
+    ]
+  },
+  "selected_config": {
+    "name": "recent",
+    "max_depth": 2,
+    "n_estimators": 220,
+    "min_child_weight": 60,
+    "window": 504
+  },
+  "feature_scope": "full",
+  "calibration": {
+    "method": "sigmoid",
+    "a": 0.0,
+    "b": -0.8273689185658822
+  },
+  "fit_details": {
+    "fit_end": "2024-12-13",
+    "calibration_start": "2024-12-16",
+    "fit_rows": 14030,
+    "calibration_rows": 5355,
+    "calibration_end": "2025-09-25"
+  },
+  "previous_recipe": {
+    "log_loss": 0.6489369869232178,
+    "brier_score": 0.2249007225036621,
+    "roc_auc": 0.4400496770933526
+  },
+  "baselines": {
+    "frequency": {
+      "log_loss": 0.6184109807273382,
+      "brier_score": 0.213340345302004,
+      "roc_auc": 0.5
+    },
+    "recent_frequency": {
+      "log_loss": 0.6090954868329778,
+      "brier_score": 0.20914915709300172,
+      "roc_auc": 0.5
+    },
+    "ticker_frequency": {
+      "log_loss": 0.6187032584329061,
+      "brier_score": 0.21351674700677328,
+      "roc_auc": 0.5122433036208983
+    }
+  },
+  "uncertainty": {
+    "mean_daily_logloss_improvement": 0.00026098525981966387,
+    "block_bootstrap_95pct": [
+      -0.0009870116134662675,
+      0.0014654761285120832
+    ],
+    "block_sessions": 5,
+    "replicates": 1000
+  },
+  "promotion_passed": false,
+  "discrimination_passed": false,
+  "prediction_std": 0.0,
+  "notes": "Candidate selection uses development folds only. This historical test overlaps an earlier inspected report; it is not prospective proof. No test-driven second search is performed. Fixed universe survivorship bias remains.",
+  "dataset_sha256": "64f9370f8c1f90130e4c51a9036ee40c1ba3f8ab6c2cb5f5cab3f2fa086922af",
+  "tickers": [
+    "AKBNK",
+    "ALARK",
+    "ARCLK",
+    "ASELS",
+    "ASTOR",
+    "BIMAS",
+    "EKGYO",
+    "ENKAI",
+    "EREGL",
+    "FROTO",
+    "GARAN",
+    "ISCTR",
+    "KCHOL",
+    "KRDMD",
+    "MGROS",
+    "PETKM",
+    "PGSUS",
+    "SAHOL",
+    "SASA",
+    "SISE",
+    "TAVHL",
+    "TCELL",
+    "THYAO",
+    "TOASO",
+    "TTKOM",
+    "TUPRS",
+    "ULKER",
+    "YKBNK"
+  ]
+}

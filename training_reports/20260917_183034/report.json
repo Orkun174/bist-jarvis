@@ -1,0 +1,127 @@
+{
+  "log_loss": 0.7201146541785454,
+  "brier_score": 0.26241476151070664,
+  "roc_auc": 0.4976116413010211,
+  "target_definition": "Close[t+5] > Close[t]; 5 trading sessions",
+  "horizon_sessions": 5,
+  "return_threshold": 0.0,
+  "target_comparison": ">",
+  "validation_auc": 0.4976116413010211,
+  "raw_validation_auc": 0.4976116413010211,
+  "acceptance_rule": "validation_auc > 0.53",
+  "baseline_log_loss": 0.6956988373185333,
+  "baseline_brier_score": 0.2512637855762323,
+  "split_date": "2025-09-24",
+  "training_rows": 26299,
+  "validation_rows": 6571,
+  "training_positive_rate": 0.5561428191185976,
+  "validation_positive_rate": 0.5168163141074418,
+  "selection": {
+    "selected": "directional:full:identity",
+    "selection_metric": "roc_auc",
+    "maximize": true,
+    "fold_aucs": {
+      "directional:full:identity": [
+        0.4099297787620156,
+        0.5267473122617667,
+        0.46135174600152246
+      ],
+      "directional_recent:full:identity": [
+        0.4099297787620156,
+        0.5267473122617667,
+        0.456297274106514
+      ]
+    },
+    "ranking": [
+      "directional:full:identity",
+      "directional_recent:full:identity"
+    ]
+  },
+  "selected_config": {
+    "name": "directional",
+    "max_depth": 6,
+    "n_estimators": 400,
+    "min_child_weight": 60,
+    "window": null
+  },
+  "feature_scope": "full",
+  "calibration": {
+    "method": "identity"
+  },
+  "fit_details": {
+    "fit_end": "2024-12-10",
+    "calibration_start": "2024-12-11",
+    "fit_rows": 20828,
+    "calibration_rows": 5331,
+    "calibration_end": "2025-09-23",
+    "class_weighting": "disabled",
+    "fit_positive_count": 11856,
+    "fit_negative_count": 8972
+  },
+  "previous_recipe": {
+    "log_loss": 0.7314314842224121,
+    "brier_score": 0.26794952154159546,
+    "roc_auc": 0.4598576370533189
+  },
+  "baselines": {
+    "frequency": {
+      "log_loss": 0.6956988373185333,
+      "brier_score": 0.2512637855762323,
+      "roc_auc": 0.5
+    },
+    "recent_frequency": {
+      "log_loss": 0.6929639023282865,
+      "brier_score": 0.24990836192364338,
+      "roc_auc": 0.5
+    },
+    "ticker_frequency": {
+      "log_loss": 0.6969823271959005,
+      "brier_score": 0.25188691020444953,
+      "roc_auc": 0.502750108974894
+    }
+  },
+  "uncertainty": {
+    "mean_daily_logloss_improvement": -0.02702647311927434,
+    "block_bootstrap_95pct": [
+      -0.05117851755455631,
+      -0.006114503034719357
+    ],
+    "block_sessions": 5,
+    "replicates": 1000
+  },
+  "promotion_passed": false,
+  "discrimination_passed": false,
+  "prediction_std": 0.10475460774969114,
+  "notes": "Candidate selection uses development folds only. This historical test overlaps an earlier inspected report; it is not prospective proof. No test-driven second search is performed. Fixed universe survivorship bias remains.",
+  "dataset_sha256": "27d067e89ffe7809f0fe04a29fafd45a5e72ce68b018703ccd06b489bfafcef6",
+  "tickers": [
+    "AKBNK",
+    "ALARK",
+    "ARCLK",
+    "ASELS",
+    "ASTOR",
+    "BIMAS",
+    "EKGYO",
+    "ENKAI",
+    "EREGL",
+    "FROTO",
+    "GARAN",
+    "ISCTR",
+    "KCHOL",
+    "KRDMD",
+    "MGROS",
+    "PETKM",
+    "PGSUS",
+    "SAHOL",
+    "SASA",
+    "SISE",
+    "TAVHL",
+    "TCELL",
+    "THYAO",
+    "TOASO",
+    "TTKOM",
+    "TUPRS",
+    "ULKER",
+    "YKBNK"
+  ]
+}

@@ -1,0 +1,82 @@
+# .github/workflows/daily_scan.yml
+name: Daily BIST Portfolio Scan
+
+on:
+  schedule:
+    - cron: "30 15 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bist-daily-scan
+  cancel-in-progress: false
+
+jobs:
+  daily-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      TZ: Europe/Istanbul
+      PYTHONUNBUFFERED: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      OMP_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure Istanbul timezone
+        run: |
+          sudo timedatectl set-timezone Europe/Istanbul
+          python -c "import os, time; os.environ['TZ']='Europe/Istanbul'; time.tzset(); print(time.strftime('%Y-%m-%d %H:%M:%S %Z'))"
+
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            "numpy<2" \
+            "pandas<3" \
+            "plotly<6.0.0" \
+            vectorbt \
+            xgboost \
+            yfinance \
+            requests \
+            streamlit \
+            shap \
+            scikit-learn \
+            feedparser \
+            tzdata
+
+      - name: Verify required project files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          required = (
+              "live_inference.py",
+              "core/ai_analyzer.py",
+              "bist_xgb_model.json",
+          )
+          missing = [name for name in required if not Path(name).is_file()]
+          if missing:
+              raise SystemExit("Missing required files: " + ", ".join(missing))
+          PY
+
+      - name: Run daily inference and notify Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python live_inference.py

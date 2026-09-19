@@ -1,0 +1,159 @@
+{
+  "log_loss": 0.5994433035219942,
+  "brier_score": 0.2046241831030244,
+  "roc_auc": 0.5,
+  "target_definition": "Close[t+5] / Close[t] - 1 >= 0.03; 5 trading sessions",
+  "horizon_sessions": 5,
+  "return_threshold": 0.03,
+  "baseline_log_loss": 0.6113200345841459,
+  "baseline_brier_score": 0.20991351245104978,
+  "split_date": "2025-09-24",
+  "training_rows": 26299,
+  "validation_rows": 6571,
+  "training_positive_rate": 0.35993764021445684,
+  "validation_positive_rate": 0.286866534774007,
+  "selection": {
+    "selected": "weighted_recent:local:sigmoid",
+    "fold_log_losses": {
+      "weighted:full:identity": [
+        0.7489281513950139,
+        0.6610818181924669,
+        0.7025975014240511
+      ],
+      "weighted:full:sigmoid": [
+        0.6712182779190036,
+        0.6075201281315169,
+        0.6309263264622004
+      ],
+      "weighted:local:identity": [
+        0.7217718453012694,
+        0.6919615390912145,
+        0.7322983327621378
+      ],
+      "weighted:local:sigmoid": [
+        0.6712149452044451,
+        0.605159000606379,
+        0.628890237579305
+      ],
+      "weighted_recent:full:identity": [
+        0.7489281513950139,
+        0.6610818181924669,
+        0.7270718911193419
+      ],
+      "weighted_recent:full:sigmoid": [
+        0.6712182779190036,
+        0.6075201281315169,
+        0.6285559309484203
+      ],
+      "weighted_recent:local:identity": [
+        0.7217718453012694,
+        0.6919615390912145,
+        0.7466250843609598
+      ],
+      "weighted_recent:local:sigmoid": [
+        0.6712149452044451,
+        0.605159000606379,
+        0.6256535430429387
+      ]
+    },
+    "ranking": [
+      "weighted_recent:local:sigmoid",
+      "weighted:local:sigmoid",
+      "weighted_recent:full:sigmoid",
+      "weighted:full:sigmoid",
+      "weighted:full:identity",
+      "weighted_recent:full:identity",
+      "weighted:local:identity",
+      "weighted_recent:local:identity"
+    ]
+  },
+  "selected_config": {
+    "name": "weighted_recent",
+    "max_depth": 5,
+    "n_estimators": 300,
+    "min_child_weight": 60,
+    "window": 504
+  },
+  "feature_scope": "local",
+  "calibration": {
+    "method": "sigmoid",
+    "a": 0.0,
+    "b": -0.8763166567157405
+  },
+  "fit_details": {
+    "fit_end": "2024-12-10",
+    "calibration_start": "2024-12-11",
+    "fit_rows": 14025,
+    "calibration_rows": 5331,
+    "calibration_end": "2025-09-23",
+    "scale_pos_weight": 1.83218901453958,
+    "fit_positive_count": 4952,
+    "fit_negative_count": 9073
+  },
+  "previous_recipe": {
+    "log_loss": 0.6419792175292969,
+    "brier_score": 0.22173260152339935,
+    "roc_auc": 0.4417058091657412
+  },
+  "baselines": {
+    "frequency": {
+      "log_loss": 0.6113200345841459,
+      "brier_score": 0.20991351245104978,
+      "roc_auc": 0.5
+    },
+    "recent_frequency": {
+      "log_loss": 0.6003449707098591,
+      "brier_score": 0.20500419629629407,
+      "roc_auc": 0.5
+    },
+    "ticker_frequency": {
+      "log_loss": 0.6117529061785707,
+      "brier_score": 0.2101816890343814,
+      "roc_auc": 0.5082489066704705
+    }
+  },
+  "uncertainty": {
+    "mean_daily_logloss_improvement": 0.0009471697684917977,
+    "block_bootstrap_95pct": [
+      -0.002492156150859982,
+      0.0043338180926584995
+    ],
+    "block_sessions": 5,
+    "replicates": 1000
+  },
+  "promotion_passed": false,
+  "discrimination_passed": false,
+  "prediction_std": 0.0,
+  "notes": "Candidate selection uses development folds only. This historical test overlaps an earlier inspected report; it is not prospective proof. No test-driven second search is performed. Fixed universe survivorship bias remains.",
+  "dataset_sha256": "8a30a064faa354c90931d63c8c606f2051def14c566b4d5cbba2a0ff0f6d6625",
+  "tickers": [
+    "AKBNK",
+    "ALARK",
+    "ARCLK",
+    "ASELS",
+    "ASTOR",
+    "BIMAS",
+    "EKGYO",
+    "ENKAI",
+    "EREGL",
+    "FROTO",
+    "GARAN",
+    "ISCTR",
+    "KCHOL",
+    "KRDMD",
+    "MGROS",
+    "PETKM",
+    "PGSUS",
+    "SAHOL",
+    "SASA",
+    "SISE",
+    "TAVHL",
+    "TCELL",
+    "THYAO",
+    "TOASO",
+    "TTKOM",
+    "TUPRS",
+    "ULKER",
+    "YKBNK"
+  ]
+}

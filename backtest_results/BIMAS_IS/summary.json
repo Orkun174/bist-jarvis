@@ -1,0 +1,21 @@
+{
+  "ticker": "BIMAS.IS",
+  "start": "2022-03-22",
+  "end": "2026-09-18",
+  "model_trained_at": "2026-09-18T19:04:12.332558",
+  "strictly_post_training_dates": false,
+  "evaluation_type": "fixed_model_historical_replay",
+  "feature_count": 18,
+  "sharpe_252_sessions": 0.5177991713160358,
+  "max_drawdown": 0.011047334599919467,
+  "cagr_252_sessions": 0.004913746931651364,
+  "closed_trade_win_rate": 0.6296296296296297,
+  "closed_trades": 27,
+  "final_equity_try": 1022044.3092424923,
+  "signal_coverage": 0.22033898305084745,
+  "long_target_coverage": 0.032114183764495985,
+  "probability_std": 0.034745703973314446,
+  "execution": "next_open_long_only",
+  "payoff_ratio_assumption": 1.5,
+  "commission": 0.0004
+}

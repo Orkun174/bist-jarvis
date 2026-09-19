@@ -1,0 +1,42 @@
+{
+  "xgb_probability": 0.43149882555007935,
+  "vix_percentile": 58.333333333333336,
+  "dynamic_threshold_used": {
+    "lower": 0.3933333333333333,
+    "upper": 0.6066666666666667
+  },
+  "top_3_shap_contributors": [
+    {
+      "feature": "Relative_Return_1D",
+      "value": -0.029506362974643707,
+      "shap_log_odds": -0.053280360996723175,
+      "driver_type": "technical"
+    },
+    {
+      "feature": "ATR_Normalized",
+      "value": 0.0459284670650959,
+      "shap_log_odds": -0.04862121120095253,
+      "driver_type": "technical"
+    },
+    {
+      "feature": "macro_USDTRY_5d_mean_lag",
+      "value": 0.0007913489826023579,
+      "shap_log_odds": -0.030276654288172722,
+      "driver_type": "macro"
+    }
+  ],
+  "CMF_20": -0.18545038821857324,
+  "OBV": 3921137993.0,
+  "OBV_Change_5D": 60685411.0,
+  "OBV_trend": "rising",
+  "RSI_14": 46.71489828700541,
+  "MACD": -0.18652132418042378,
+  "technical_data_quality": {
+    "latest_bar_marked_synthetic": true,
+    "latest_prices_observed": false,
+    "latest_volume_imputed": true,
+    "volume_used": 57323096.0,
+    "volume_source_date": "2026-09-16",
+    "volume_fallback_method": "forward_fill"
+  }
+}
