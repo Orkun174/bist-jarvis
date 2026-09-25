@@ -4,30 +4,40 @@ live_inference.py
 Dependencies:
     pip install pandas numpy requests yfinance xgboost truststore tzdata
     pip install "isyatirimhisse>=5.0.0"
+    pip install torch transformers huggingface_hub feedparser beautifulsoup4
 
 Optional local .env support:
     pip install python-dotenv
+
+Project integrations:
+    core.ai_analyzer:build_pipeline_features
+    core.ai_analyzer:get_model
+    core.market_data.fetch_news
+    retrain_model.score_corpus
 
 Telegram environment variables:
     TELEGRAM_BOT_TOKEN
     TELEGRAM_CHAT_ID
 
-GitHub Actions must expose its secrets to the Python step:
+GitHub Actions must expose repository secrets to the Python step:
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
-IMPORTANT:
-The requested default history path is work/backfill/THYAO/coverage.csv.
-The coverage.csv produced by retrain_model.py is a NEWS COVERAGE REPORT,
-not historical OHLCV. If that file is the news report, use --history to
-supply an actual daily price CSV. This script will report the mismatch
-instead of interpreting news counts as prices.
+Default historical price file:
+    work/backfill/THYAO/THYAO.csv
 
 Supported date columns:
     Date, date, datetime, timestamp, Seans Tarihi
 
-Importing this module does not run inference or send notifications.
+The built-in sentiment adapter scores available same-day headlines published
+at or before the inference cutoff. It returns 0.0 when no eligible headlines
+exist. Network/model failures are not silently converted into neutral scores.
+
+The existing fetch_news helper supplies at most five headlines. This live
+headline sample is narrower than the historical KAP/RSS training corpus.
+
+Importing this module does not execute inference or send notifications.
 """
 
 from __future__ import annotations
@@ -49,21 +59,42 @@ TRT = "Europe/Istanbul"
 LOG = logging.getLogger("bist.live_inference")
 OHLCV = ["Open", "High", "Low", "Close", "Volume"]
 
+DEFAULT_SENTIMENT_MODEL = "savasy/bert-base-turkish-sentiment-cased"
+DEFAULT_SENTIMENT_LABELS = {
+    "LABEL_0": -1.0,
+    "LABEL_1": 1.0,
+}
+
+# main() updates these from the deployed model's training metadata.
+_SENTIMENT_MODEL = DEFAULT_SENTIMENT_MODEL
+_SENTIMENT_LABELS = dict(DEFAULT_SENTIMENT_LABELS)
+
 
 def resolve(spec):
-    """Resolve an existing integration function: package.module:function."""
+    """Resolve a project function or this module's built-in adapter."""
     module_name, function_name = spec.split(":", 1)
-    function = getattr(
-        importlib.import_module(module_name),
-        function_name,
-    )
+
+    # Avoid importing a second copy of this script when executed directly.
+    if module_name in {
+        "__main__",
+        __name__,
+        Path(__file__).stem,
+    }:
+        function = globals().get(function_name)
+    else:
+        module = importlib.import_module(module_name)
+        function = getattr(module, function_name)
+
     if not callable(function):
-        raise TypeError(f"Integration is not callable: {spec}")
+        raise TypeError(
+            f"Integration is missing or not callable: {spec}"
+        )
+
     return function
 
 
 def load_local_environment():
-    """Load an optional .env without overriding existing CI secrets."""
+    """Load .env beside this script without overriding existing CI secrets."""
     env_path = Path(__file__).resolve().parent / ".env"
     if not env_path.is_file():
         return
@@ -84,6 +115,200 @@ def load_local_environment():
             "Could not load .env (%s). Using existing environment variables.",
             type(exc).__name__,
         )
+
+
+def configure_sentiment_provider(model):
+    """Reuse the NLP checkpoint and label map recorded during retraining."""
+    global _SENTIMENT_MODEL, _SENTIMENT_LABELS
+
+    booster = model.get_booster()
+    saved_model = booster.attr("sentiment_model")
+    saved_labels = booster.attr("sentiment_labels")
+
+    if saved_model:
+        _SENTIMENT_MODEL = saved_model.strip()
+    else:
+        _SENTIMENT_MODEL = DEFAULT_SENTIMENT_MODEL
+
+    if saved_labels:
+        try:
+            parsed_labels = json.loads(saved_labels)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "The deployed model contains invalid sentiment_labels metadata."
+            ) from exc
+
+        if not isinstance(parsed_labels, dict) or not parsed_labels:
+            raise ValueError(
+                "sentiment_labels metadata must be a nonempty JSON object."
+            )
+
+        _SENTIMENT_LABELS = {
+            str(label): float(polarity)
+            for label, polarity in parsed_labels.items()
+        }
+    else:
+        _SENTIMENT_LABELS = dict(DEFAULT_SENTIMENT_LABELS)
+
+    if not _SENTIMENT_MODEL:
+        raise ValueError("The sentiment model identifier is empty.")
+
+    if not all(
+        np.isfinite(value) and -1 <= value <= 1
+        for value in _SENTIMENT_LABELS.values()
+    ):
+        raise ValueError(
+            "Sentiment label polarities must be finite numbers in [-1, 1]."
+        )
+
+    LOG.info("Live sentiment checkpoint: %s", _SENTIMENT_MODEL)
+
+
+def live_sentiment_provider(ticker, cutoff) -> float:
+    """Return the mean sentiment of eligible same-day news in [-1, 1].
+
+    Uses the project's verified functions:
+        core.market_data.fetch_news(ticker, limit=5)
+        retrain_model.score_corpus(news, model_path, labels)
+
+    Only dated headlines from the cutoff's Turkish calendar day, published
+    no later than the cutoff, are scored. No eligible news returns 0.0.
+    Retrieval or NLP failures propagate instead of masquerading as no news.
+    """
+    cutoff = pd.Timestamp(cutoff)
+
+    if pd.isna(cutoff) or cutoff.tzinfo is None:
+        raise ValueError(
+            "Sentiment cutoff must be a valid timezone-aware timestamp."
+        )
+
+    cutoff = cutoff.tz_convert(TRT)
+    day_start = cutoff.normalize()
+    symbol = ticker.strip().upper().removesuffix(".IS")
+
+    from core.market_data import fetch_news
+
+    # This project's helper supports limits from 1 through 5.
+    try:
+        articles = fetch_news(symbol, limit=5)
+    except Exception as exc:
+        raise RuntimeError(
+            f"News retrieval failed for {symbol}; sentiment is unavailable."
+        ) from exc
+
+    if not isinstance(articles, list):
+        raise TypeError("fetch_news must return a list of news dictionaries.")
+
+    eligible = []
+    seen = set()
+    undated_count = 0
+
+    for article in articles:
+        if not isinstance(article, dict):
+            raise TypeError("Each news item must be a dictionary.")
+
+        title = " ".join(str(article.get("title") or "").split())
+        if not title:
+            continue
+
+        published_raw = article.get("published_at")
+        if not published_raw:
+            undated_count += 1
+            continue
+
+        try:
+            published = pd.Timestamp(published_raw)
+            if pd.isna(published) or published.tzinfo is None:
+                undated_count += 1
+                continue
+            published = published.tz_convert(TRT)
+        except (TypeError, ValueError, OverflowError):
+            undated_count += 1
+            continue
+
+        if not day_start <= published <= cutoff:
+            continue
+
+        identity = title.casefold()
+        if identity in seen:
+            continue
+        seen.add(identity)
+
+        eligible.append({
+            "text": title,
+            "published_at": published.isoformat(),
+            "source": "live_rss",
+            "url": str(article.get("url") or ""),
+        })
+
+    if undated_count:
+        LOG.warning(
+            "Excluded %d news item(s) without a valid timezone-aware "
+            "publication timestamp.",
+            undated_count,
+        )
+
+    if not eligible:
+        LOG.info(
+            "%s: no eligible same-day headlines at or before %s; "
+            "news_sentiment=0.0.",
+            symbol,
+            cutoff.isoformat(),
+        )
+        return 0.0
+
+    # Importing retrain_model does not execute its guarded main().
+    # Its scorer keeps the same probability-weighted label calculation,
+    # batch_size=32, truncation=True, and maximum token length as training.
+    from retrain_model import score_corpus
+
+    news = pd.DataFrame(eligible)
+
+    try:
+        scored = score_corpus(
+            news,
+            _SENTIMENT_MODEL,
+            dict(_SENTIMENT_LABELS),
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"Local NLP scoring failed for {symbol}; sentiment is unavailable."
+        ) from exc
+
+    if (
+        not isinstance(scored, pd.DataFrame)
+        or "score" not in scored.columns
+        or len(scored) != len(news)
+    ):
+        raise ValueError(
+            "score_corpus returned an invalid sentiment result."
+        )
+
+    values = pd.to_numeric(
+        scored["score"],
+        errors="raise",
+    ).to_numpy(dtype=float)
+
+    if (
+        values.size == 0
+        or not np.isfinite(values).all()
+        or (values < -1.000001).any()
+        or (values > 1.000001).any()
+    ):
+        raise ValueError(
+            "NLP sentiment scores must be finite and within [-1, 1]."
+        )
+
+    sentiment = float(np.clip(values.mean(), -1.0, 1.0))
+
+    LOG.info(
+        "%s: scored %d same-day headline(s); news_sentiment=%+.4f.",
+        symbol,
+        len(values),
+        sentiment,
+    )
+
+    return sentiment
 
 
 def load_history_csv(path, require_ohlcv=True):
@@ -110,12 +335,10 @@ def load_history_csv(path, require_ohlcv=True):
     )
 
     if date_col:
-        # Mixed string formats are supported by pandas >= 2.0.
-        # Numeric dates require an explicit epoch unit instead of guessing.
         if pd.api.types.is_numeric_dtype(history[date_col]):
             raise ValueError(
-                f"Date column {date_col!r} is numeric. Convert it to ISO date "
-                "strings or explicitly define its timestamp unit."
+                f"Date column {date_col!r} is numeric. Convert it to ISO "
+                "date strings or explicitly define its timestamp unit."
             )
 
         history[date_col] = pd.to_datetime(
@@ -135,16 +358,15 @@ def load_history_csv(path, require_ohlcv=True):
         raise ValueError(
             f"No supported date column found in {path!r}. "
             "Expected Date, date, datetime, timestamp, or Seans Tarihi. "
-            "The retraining coverage.csv is a news coverage report, not "
-            "price history; pass --history with a daily OHLCV CSV."
+            "Supply an actual daily price CSV, not a news coverage report."
         )
 
     required = set(OHLCV) if require_ohlcv else {"Close"}
     missing = sorted(required - set(history.columns))
+
     if missing:
         raise ValueError(
-            f"History CSV {path!r} is missing price columns: {missing}. "
-            "Use a daily price CSV, not the news coverage.csv report."
+            f"History CSV {path!r} is missing price columns: {missing}."
         )
 
     for column in required:
@@ -168,6 +390,7 @@ def normalize_daily(frame):
 
     if result.index.isna().any():
         raise ValueError("Historical bars contain missing dates.")
+
     if result.index.has_duplicates:
         raise ValueError("Duplicate daily bars.")
 
@@ -187,6 +410,7 @@ def flatten_yahoo(frame, ticker):
             for level in range(result.columns.nlevels)
             if ticker in result.columns.get_level_values(level)
         ]
+
         if len(levels) != 1:
             raise ValueError("Unexpected Yahoo column schema.")
 
@@ -214,6 +438,7 @@ def is_close(symbol, day):
         "HGDG_HS_KODU",
         "HGDG_KAPANIS",
     }
+
     if not isinstance(raw, pd.DataFrame) or not required.issubset(raw.columns):
         raise ValueError("Unexpected Is Yatirim response schema.")
 
@@ -226,6 +451,7 @@ def is_close(symbol, day):
         (dates == day)
         & (raw["HGDG_HS_KODU"] == symbol)
     ]
+
     if len(rows) != 1:
         raise ValueError(
             "Is Yatirim has not published exactly one T-0 row."
@@ -376,6 +602,7 @@ def align_and_predict(model, df):
         raise ValueError("Duplicate input feature names.")
 
     missing = set(names) - set(df.columns)
+
     if missing:
         raise ValueError(
             f"Required model features are missing: {sorted(missing)}"
@@ -388,7 +615,7 @@ def align_and_predict(model, df):
             "Required model features contain NaN or infinity."
         )
 
-    # Legacy models drop the extra sentiment column. Retrained models retain it.
+    # Preserve exact training order and drop extras for legacy models.
     df = df.reindex(columns=model.get_booster().feature_names)
     return model.predict(df)
 
@@ -396,6 +623,7 @@ def align_and_predict(model, df):
 def prediction_probabilities(model, df):
     """Return actual classifier probabilities when supported."""
     predict_proba = getattr(model, "predict_proba", None)
+
     if not callable(predict_proba):
         return None
 
@@ -445,11 +673,13 @@ def read_holdout_score(model):
     """Read saved validation metadata, not a prediction probability."""
     try:
         raw = model.get_booster().attr("holdout_score")
+
         if raw is None or raw == "not_evaluated":
             return None
 
         score = float(raw)
         return score if np.isfinite(score) else None
+
     except (AttributeError, TypeError, ValueError):
         return None
 
@@ -464,20 +694,18 @@ def run_live(
     require_ohlcv=True,
     as_of=None,
 ):
-    """Run inference using the existing feature and sentiment adapters.
-
-    sentiment_provider(ticker, cutoff) must return a finite scalar in [-1, 1].
-    Feature and sentiment calculations must match the training contract.
-    """
+    """Run inference using the existing feature and sentiment adapters."""
     now = (
         pd.Timestamp.now(tz=TRT)
         if as_of is None
         else pd.Timestamp(as_of)
     )
+
     if now.tzinfo is None:
         raise ValueError("as_of must be timezone-aware.")
 
     now = now.tz_convert(TRT)
+
     if now.time() < time(18, 30):
         raise ValueError("Run at or after 18:30 TRT.")
 
@@ -546,8 +774,9 @@ def compact_text(value, limit=250):
 
 
 def format_telegram_message(result):
-    """Format predictions without assigning invented BUY/SELL meanings."""
+    """Format predictions without inventing BUY/SELL class meanings."""
     prediction = result.get("prediction")
+
     if isinstance(prediction, list) and len(prediction) == 1:
         prediction = prediction[0]
 
@@ -556,6 +785,7 @@ def format_telegram_message(result):
         decision = prediction
 
     probabilities = result.get("probabilities")
+
     if probabilities:
         probability_text = "; ".join(
             f"{compact_text(label, 40)}: {float(value):.2%}"
@@ -594,7 +824,6 @@ def format_telegram_message(result):
         f"Close source: {compact_text(provenance.get('close_source'), 100)}",
     ])
 
-    # Plain text avoids Markdown/HTML parsing errors.
     return message[:1900]
 
 
@@ -608,6 +837,7 @@ def notification_warning(message):
             .replace("\r", "%0D")
             .replace("\n", "%0A")
         )
+
         print(
             f"::warning title=Telegram notification::{escaped}",
             flush=True,
@@ -620,8 +850,10 @@ def send_telegram_notification(result):
     chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
     missing = []
+
     if not token:
         missing.append("TELEGRAM_BOT_TOKEN")
+
     if not chat_id:
         missing.append("TELEGRAM_CHAT_ID")
 
@@ -631,6 +863,7 @@ def send_telegram_notification(result):
             + ", ".join(missing)
             + ". In GitHub Actions, map repository secrets into the step's env."
         )
+
         return {
             "status": "skipped",
             "reason": "missing_credentials",
@@ -644,6 +877,7 @@ def send_telegram_notification(result):
             "Telegram message formatting failed "
             f"({type(exc).__name__}); inference completed."
         )
+
         return {
             "status": "failed",
             "reason": "formatting_error",
@@ -680,6 +914,7 @@ def send_telegram_notification(result):
                     ),
                     429: "Telegram rate limit reached.",
                 }
+
                 hint = hints.get(
                     status_code,
                     "Telegram returned an unsuccessful HTTP response.",
@@ -688,6 +923,7 @@ def send_telegram_notification(result):
                 notification_warning(
                     f"Telegram delivery failed: HTTP {status_code}. {hint}"
                 )
+
                 return {
                     "status": "failed",
                     "reason": "http_error",
@@ -699,12 +935,14 @@ def send_telegram_notification(result):
                     "Telegram did not confirm delivery: invalid response "
                     "or API ok=false."
                 )
+
                 return {
                     "status": "failed",
                     "reason": "api_rejected",
                 }
 
             delivered_message = body.get("result")
+
             if (
                 not isinstance(delivered_message, dict)
                 or not isinstance(
@@ -715,16 +953,19 @@ def send_telegram_notification(result):
                 notification_warning(
                     "Telegram response did not contain a valid message ID."
                 )
+
                 return {
                     "status": "unknown",
                     "reason": "missing_delivery_receipt",
                 }
 
             message_id = delivered_message["message_id"]
+
             LOG.info(
                 "Telegram delivery confirmed; message_id=%s.",
                 message_id,
             )
+
             return {
                 "status": "sent",
                 "message_id": message_id,
@@ -732,11 +973,11 @@ def send_telegram_notification(result):
 
     except requests.Timeout:
         # A timed-out POST may already have been delivered.
-        # Automatic retry could therefore send a duplicate.
         notification_warning(
             "Telegram request timed out; delivery status is unknown. "
             "No automatic retry was made to avoid duplicate notifications."
         )
+
         return {
             "status": "unknown",
             "reason": "timeout",
@@ -748,6 +989,7 @@ def send_telegram_notification(result):
             "Telegram network request failed "
             f"({type(exc).__name__}); delivery was not confirmed."
         )
+
         return {
             "status": "unknown",
             "reason": "network_error",
@@ -758,6 +1000,7 @@ def send_telegram_notification(result):
             "Telegram notification failed "
             f"({type(exc).__name__}); inference completed."
         )
+
         return {
             "status": "failed",
             "reason": "unexpected_notification_error",
@@ -783,8 +1026,8 @@ def main():
     )
     parser.add_argument(
         "--sentiment-provider",
-        default="core.ai_analyzer:get_sentiment",
-        help="nlp_engine:function",
+        default="__main__:live_sentiment_provider",
+        help="Sentiment callable: module:function",
     )
     parser.add_argument(
         "--model-factory",
@@ -802,6 +1045,7 @@ def main():
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
+
     load_local_environment()
 
     history = load_history_csv(
@@ -812,16 +1056,21 @@ def main():
     model = resolve(args.model_factory)()
     model.load_model("model.json")
 
+    sentiment_provider = resolve(args.sentiment_provider)
+
+    if sentiment_provider is live_sentiment_provider:
+        configure_sentiment_provider(model)
+
     result = run_live(
         args.ticker,
         history,
         model,
         resolve(args.features),
-        resolve(args.sentiment_provider),
+        sentiment_provider,
         require_ohlcv=not args.close_only,
     )
 
-    # Notification delivery is explicitly invoked after successful inference.
+    # Telegram delivery remains explicitly connected to successful inference.
     result["telegram"] = send_telegram_notification(result)
 
     print(
