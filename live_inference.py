@@ -297,9 +297,11 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     model = resolve(args.model_factory)()
     model.load_model("model.json")
-    history = pd.read_csv(
-        args.history, index_col="Date", parse_dates=["Date"]
-    )
+    history = pd.read_csv(args.history)
+date_col = next((c for c in ["Date", "date", "datetime", "timestamp", "Seans Tarihi"] if c in history.columns), None)
+if date_col:
+    history[date_col] = pd.to_datetime(history[date_col])
+    history = history.set_index(date_col)
 
     result = run_live(
         args.ticker,
