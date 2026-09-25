@@ -270,18 +270,26 @@ if __name__ == "__main__":
     import json
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ticker", required=True)
+    parser.add_argument("--ticker", default="THYAO")
     parser.add_argument(
-        "--history", required=True, help="Daily CSV with a Date column"
+        "--history",
+        default="work/backfill/THYAO/coverage.csv",
+        help="Daily CSV with a Date column",
     )
     parser.add_argument(
-        "--features", required=True, help="Existing module:function"
+        "--features",
+        default="core.ai_analyzer:build_pipeline_features",
+        help="Existing module:function",
     )
     parser.add_argument(
-        "--sentiment-provider", required=True, help="nlp_engine:function"
+        "--sentiment-provider",
+        default="core.ai_analyzer:get_sentiment",
+        help="nlp_engine:function",
     )
     parser.add_argument(
-        "--model-factory", required=True, help="Existing module:function"
+        "--model-factory",
+        default="core.ai_analyzer:get_model",
+        help="Existing module:function",
     )
     parser.add_argument("--close-only", action="store_true")
     args = parser.parse_args()
