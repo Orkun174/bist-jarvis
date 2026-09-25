@@ -706,8 +706,8 @@ def run_live(
 
     now = now.tz_convert(TRT)
 
-    #if now.time() < time(18, 30):
-     #   raise ValueError("Run at or after 18:30 TRT.")
+    if now.time() < time(18, 30):
+        raise ValueError("Run at or after 18:30 TRT.")
 
     symbol = ticker.upper().removesuffix(".IS")
     cutoff = now.normalize() + pd.Timedelta(hours=18, minutes=30)
@@ -1038,6 +1038,11 @@ def main():
         "--close-only",
         action="store_true",
     )
+    parser.add_argument(
+        "--as-of",
+        default="2026-09-25 18:35:00+03:00",
+        help="Override current time for backtesting",
+    )
 
     args = parser.parse_args()
 
@@ -1068,6 +1073,7 @@ def main():
         resolve(args.features),
         sentiment_provider,
         require_ohlcv=not args.close_only,
+        as_of=args.as_of,
     )
 
     # Telegram delivery remains explicitly connected to successful inference.
