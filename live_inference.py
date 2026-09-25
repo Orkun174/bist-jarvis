@@ -8,22 +8,26 @@ Dependencies:
 Optional local .env support:
     pip install python-dotenv
 
-Required Telegram environment variables:
+Telegram environment variables:
     TELEGRAM_BOT_TOKEN
     TELEGRAM_CHAT_ID
 
-GitHub Actions must expose repository secrets to the Python step:
+GitHub Actions must expose its secrets to the Python step:
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
-No Telegram helper was found in the project files available for inspection.
-This module therefore uses the standard requests.post fallback.
+IMPORTANT:
+The requested default history path is work/backfill/THYAO/coverage.csv.
+The coverage.csv produced by retrain_model.py is a NEWS COVERAGE REPORT,
+not historical OHLCV. If that file is the news report, use --history to
+supply an actual daily price CSV. This script will report the mismatch
+instead of interpreting news counts as prices.
 
-Telegram API:
-    https://core.telegram.org/bots/api#sendmessage
+Supported date columns:
+    Date, date, datetime, timestamp, Seans Tarihi
 
-Importing this module does not perform inference or send notifications.
+Importing this module does not run inference or send notifications.
 """
 
 from __future__ import annotations
@@ -59,7 +63,7 @@ def resolve(spec):
 
 
 def load_local_environment():
-    """Optionally load .env beside this script without overriding CI secrets."""
+    """Load an optional .env without overriding existing CI secrets."""
     env_path = Path(__file__).resolve().parent / ".env"
     if not env_path.is_file():
         return
@@ -76,15 +80,84 @@ def load_local_environment():
     try:
         load_dotenv(dotenv_path=env_path, override=False)
     except Exception as exc:
-        # Do not log file contents or credentials.
         LOG.warning(
             "Could not load .env (%s). Using existing environment variables.",
             type(exc).__name__,
         )
 
 
+def load_history_csv(path, require_ohlcv=True):
+    """Read daily prices and dynamically detect the date column."""
+    history = pd.read_csv(path)
+    history.columns = [
+        column.strip() if isinstance(column, str) else column
+        for column in history.columns
+    ]
+
+    date_col = next(
+        (
+            column
+            for column in [
+                "Date",
+                "date",
+                "datetime",
+                "timestamp",
+                "Seans Tarihi",
+            ]
+            if column in history.columns
+        ),
+        None,
+    )
+
+    if date_col:
+        # Mixed string formats are supported by pandas >= 2.0.
+        # Numeric dates require an explicit epoch unit instead of guessing.
+        if pd.api.types.is_numeric_dtype(history[date_col]):
+            raise ValueError(
+                f"Date column {date_col!r} is numeric. Convert it to ISO date "
+                "strings or explicitly define its timestamp unit."
+            )
+
+        history[date_col] = pd.to_datetime(
+            history[date_col],
+            format="mixed",
+            dayfirst=(date_col == "Seans Tarihi"),
+            errors="raise",
+        )
+
+        if history[date_col].isna().any():
+            raise ValueError(
+                f"History CSV contains missing dates in {date_col!r}."
+            )
+
+        history = history.set_index(date_col)
+    else:
+        raise ValueError(
+            f"No supported date column found in {path!r}. "
+            "Expected Date, date, datetime, timestamp, or Seans Tarihi. "
+            "The retraining coverage.csv is a news coverage report, not "
+            "price history; pass --history with a daily OHLCV CSV."
+        )
+
+    required = set(OHLCV) if require_ohlcv else {"Close"}
+    missing = sorted(required - set(history.columns))
+    if missing:
+        raise ValueError(
+            f"History CSV {path!r} is missing price columns: {missing}. "
+            "Use a daily price CSV, not the news coverage.csv report."
+        )
+
+    for column in required:
+        history[column] = pd.to_numeric(
+            history[column],
+            errors="raise",
+        )
+
+    return normalize_daily(history)
+
+
 def normalize_daily(frame):
-    """Normalize daily bar dates without synthesizing missing sessions."""
+    """Normalize daily bar dates without inventing trading sessions."""
     result = frame.copy()
     result.index = pd.DatetimeIndex(pd.to_datetime(result.index))
 
@@ -92,6 +165,9 @@ def normalize_daily(frame):
         result.index = result.index.tz_convert(TRT).tz_localize(None)
 
     result.index = result.index.normalize()
+
+    if result.index.isna().any():
+        raise ValueError("Historical bars contain missing dates.")
     if result.index.has_duplicates:
         raise ValueError("Duplicate daily bars.")
 
@@ -99,11 +175,12 @@ def normalize_daily(frame):
 
 
 def flatten_yahoo(frame, ticker):
-    """Support both ordinary and MultiIndex yfinance columns."""
+    """Support ordinary and MultiIndex yfinance columns."""
     if frame is None or frame.empty:
         raise ValueError("Yahoo returned no data.")
 
     result = frame.copy()
+
     if isinstance(result.columns, pd.MultiIndex):
         levels = [
             level
@@ -119,7 +196,7 @@ def flatten_yahoo(frame, ticker):
 
 
 def is_close(symbol, day):
-    """Read a validated T-0 closing price from isyatirimhisse v5+."""
+    """Read a validated T-0 close from isyatirimhisse v5+."""
     if int(version("isyatirimhisse").split(".")[0]) < 5:
         raise RuntimeError("isyatirimhisse >= 5.0.0 is required.")
 
@@ -155,6 +232,7 @@ def is_close(symbol, day):
         )
 
     close = float(rows.iloc[0]["HGDG_KAPANIS"])
+
     if not np.isfinite(close) or close <= 0:
         raise ValueError("Invalid Is Yatirim closing price.")
 
@@ -166,6 +244,7 @@ def minute_bar(ticker, day):
     import yfinance as yf
 
     start = pd.Timestamp(day, tz=TRT)
+
     raw = flatten_yahoo(
         yf.download(
             ticker,
@@ -226,7 +305,7 @@ def minute_bar(ticker, day):
 
 
 def fetch_t0(ticker, as_of, require_ohlcv=True):
-    """Prefer Is Yatirim close; use timestamped minute data when necessary."""
+    """Prefer Is Yatirim close; supplement or fall back to minute data."""
     symbol = ticker.upper().removesuffix(".IS")
     yahoo_ticker = symbol + ".IS"
     day = as_of.date()
@@ -242,8 +321,7 @@ def fetch_t0(ticker, as_of, require_ohlcv=True):
     proxy = None
     minute_time = None
 
-    # Is Yatirim's close endpoint is not assumed to supply opening price or
-    # share-count volume. Other OHLCV fields may therefore use minute proxies.
+    # Do not substitute TRY turnover for share-count Volume.
     if close is None or require_ohlcv:
         try:
             proxy, minute_time = minute_bar(yahoo_ticker, day)
@@ -286,7 +364,7 @@ def fetch_t0(ticker, as_of, require_ohlcv=True):
 
 
 def align_and_predict(model, df):
-    """Validate and align features to the deployed XGBoost schema."""
+    """Align features to the deployed XGBoost schema."""
     names = model.get_booster().feature_names
 
     if not names or len(set(names)) != len(names):
@@ -310,13 +388,13 @@ def align_and_predict(model, df):
             "Required model features contain NaN or infinity."
         )
 
-    # Extra sentiment is dropped for legacy models and retained after retraining.
+    # Legacy models drop the extra sentiment column. Retrained models retain it.
     df = df.reindex(columns=model.get_booster().feature_names)
     return model.predict(df)
 
 
 def prediction_probabilities(model, df):
-    """Return actual class probabilities when supported; never invent them."""
+    """Return actual classifier probabilities when supported."""
     predict_proba = getattr(model, "predict_proba", None)
     if not callable(predict_proba):
         return None
@@ -338,13 +416,20 @@ def prediction_probabilities(model, df):
             or not np.isfinite(probabilities).all()
             or (probabilities < 0).any()
             or (probabilities > 1).any()
-            or not np.isclose(probabilities[0].sum(), 1.0, atol=1e-5)
+            or not np.isclose(
+                probabilities[0].sum(),
+                1.0,
+                atol=1e-5,
+            )
         ):
             raise ValueError("Invalid class-probability output.")
 
         return {
             str(label): float(probability)
-            for label, probability in zip(classes, probabilities[0])
+            for label, probability in zip(
+                classes,
+                probabilities[0],
+            )
         }
 
     except Exception as exc:
@@ -357,7 +442,7 @@ def prediction_probabilities(model, df):
 
 
 def read_holdout_score(model):
-    """Read saved validation metadata; it is not a prediction probability."""
+    """Read saved validation metadata, not a prediction probability."""
     try:
         raw = model.get_booster().attr("holdout_score")
         if raw is None or raw == "not_evaluated":
@@ -379,7 +464,7 @@ def run_live(
     require_ohlcv=True,
     as_of=None,
 ):
-    """Run inference without sending a notification as an import-time side effect.
+    """Run inference using the existing feature and sentiment adapters.
 
     sentiment_provider(ticker, cutoff) must return a finite scalar in [-1, 1].
     Feature and sentiment calculations must match the training contract.
@@ -402,6 +487,7 @@ def run_live(
 
     history = normalize_daily(history)
     history = history.loc[history.index < today]
+
     if history.empty:
         raise ValueError("Historical warm-up bars are required.")
 
@@ -447,7 +533,7 @@ def run_live(
 
 
 def compact_text(value, limit=250):
-    """Create bounded single-line text without Telegram formatting syntax."""
+    """Create bounded single-line text."""
     if value is None:
         return "N/A"
 
@@ -460,7 +546,7 @@ def compact_text(value, limit=250):
 
 
 def format_telegram_message(result):
-    """Format predictions without assuming numeric classes mean BUY or SELL."""
+    """Format predictions without assigning invented BUY/SELL meanings."""
     prediction = result.get("prediction")
     if isinstance(prediction, list) and len(prediction) == 1:
         prediction = prediction[0]
@@ -508,13 +594,12 @@ def format_telegram_message(result):
         f"Close source: {compact_text(provenance.get('close_source'), 100)}",
     ])
 
-    # Plain text avoids Markdown/HTML parsing failures. This message is bounded
-    # well below Telegram's text limit, including UTF-16 surrogate pairs.
+    # Plain text avoids Markdown/HTML parsing errors.
     return message[:1900]
 
 
 def notification_warning(message):
-    """Log delivery problems without disclosing tokens or request URLs."""
+    """Log notification failures and annotate GitHub Actions runs."""
     LOG.warning("%s", message)
 
     if os.getenv("GITHUB_ACTIONS", "").lower() == "true":
@@ -523,11 +608,14 @@ def notification_warning(message):
             .replace("\r", "%0D")
             .replace("\n", "%0A")
         )
-        print(f"::warning title=Telegram notification::{escaped}", flush=True)
+        print(
+            f"::warning title=Telegram notification::{escaped}",
+            flush=True,
+        )
 
 
 def send_telegram_notification(result):
-    """Attempt one delivery and return a status without failing inference."""
+    """Attempt delivery without crashing successful inference."""
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
@@ -561,7 +649,7 @@ def send_telegram_notification(result):
             "reason": "formatting_error",
         }
 
-    # Never log this URL: it contains the bot token.
+    # Never log this URL because it contains the bot token.
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
     try:
@@ -596,6 +684,7 @@ def send_telegram_notification(result):
                     status_code,
                     "Telegram returned an unsuccessful HTTP response.",
                 )
+
                 notification_warning(
                     f"Telegram delivery failed: HTTP {status_code}. {hint}"
                 )
@@ -618,7 +707,10 @@ def send_telegram_notification(result):
             delivered_message = body.get("result")
             if (
                 not isinstance(delivered_message, dict)
-                or not isinstance(delivered_message.get("message_id"), int)
+                or not isinstance(
+                    delivered_message.get("message_id"),
+                    int,
+                )
             ):
                 notification_warning(
                     "Telegram response did not contain a valid message ID."
@@ -639,8 +731,8 @@ def send_telegram_notification(result):
             }
 
     except requests.Timeout:
-        # A timed-out POST might already have been delivered. Avoid automatic
-        # retries here because Telegram sendMessage has no idempotency key.
+        # A timed-out POST may already have been delivered.
+        # Automatic retry could therefore send a duplicate.
         notification_warning(
             "Telegram request timed out; delivery status is unknown. "
             "No automatic retry was made to avoid duplicate notifications."
@@ -651,7 +743,7 @@ def send_telegram_notification(result):
         }
 
     except requests.RequestException as exc:
-        # str(exc) can contain the token-bearing URL, so log only its type.
+        # Exception text may contain the token-bearing request URL.
         notification_warning(
             "Telegram network request failed "
             f"({type(exc).__name__}); delivery was not confirmed."
@@ -674,32 +766,36 @@ def send_telegram_notification(result):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ticker", required=True)
+
+    parser.add_argument(
+        "--ticker",
+        default="THYAO",
+    )
     parser.add_argument(
         "--history",
-        required=True,
-        help="Historical daily CSV with a Date column.",
+        default="work/backfill/THYAO/coverage.csv",
+        help="Daily CSV with a Date column",
     )
     parser.add_argument(
         "--features",
-        required=True,
-        help="Existing feature builder: module:function.",
+        default="core.ai_analyzer:build_pipeline_features",
+        help="Existing module:function",
     )
     parser.add_argument(
         "--sentiment-provider",
-        required=True,
-        help="Existing sentiment provider: module:function.",
+        default="core.ai_analyzer:get_sentiment",
+        help="nlp_engine:function",
     )
     parser.add_argument(
         "--model-factory",
-        required=True,
-        help="Existing XGBoost model factory: module:function.",
+        default="core.ai_analyzer:get_model",
+        help="Existing module:function",
     )
     parser.add_argument(
         "--close-only",
         action="store_true",
-        help="Do not require minute-derived Open/High/Low/Volume.",
     )
+
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -708,14 +804,13 @@ def main():
     )
     load_local_environment()
 
+    history = load_history_csv(
+        args.history,
+        require_ohlcv=not args.close_only,
+    )
+
     model = resolve(args.model_factory)()
     model.load_model("model.json")
-
-    history = pd.read_csv(
-        args.history,
-        index_col="Date",
-        parse_dates=["Date"],
-    )
 
     result = run_live(
         args.ticker,
@@ -726,8 +821,7 @@ def main():
         require_ohlcv=not args.close_only,
     )
 
-    # Explicit delivery is now part of the executable workflow.
-    # Notification failures are recorded without crashing successful inference.
+    # Notification delivery is explicitly invoked after successful inference.
     result["telegram"] = send_telegram_notification(result)
 
     print(
