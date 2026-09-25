@@ -773,3 +773,43 @@ def analyze(
         result["AI_Error"] = str(exc)
         # No synthetic Neutral/5 fallback when inference or parsing fails.
     return result
+def get_model() -> XGBClassifier:
+    """Fresh model factory matching deployed XGBoost objective and hyperparameters."""
+    return XGBClassifier(
+        n_estimators=100,
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=42,
+        eval_metric="logloss",
+    )
+
+
+def build_pipeline_features(bars: pd.DataFrame) -> pd.DataFrame:
+    """Single-argument adapter that extracts local features from historical bars."""
+    # Retraining corpus provides individual stock history in bars
+    # Synthetic benchmark alignment for local technical calculations
+    local = build_stationary_features(bars, bars)
+    return local
+
+
+def build_pipeline_targets(bars: pd.DataFrame, horizon: int = 5) -> pd.DataFrame:
+    """Calculate forward 5-day return target and label_end date to prevent overlap leakage."""
+    close = bars["Close"]
+    forward_return = close.shift(-horizon) / close - 1.0
+    
+    # Target: 1 if positive return, 0 otherwise
+    target = (forward_return > 0.0).astype(int)
+    
+    # Shift index backward to get the exact future session date for leakage purge
+    label_end = pd.Series(bars.index, index=bars.index).shift(-horizon)
+    
+    df = pd.DataFrame(
+        {
+            "target": target,
+            "label_end": label_end,
+        },
+        index=bars.index,
+    )
+    return df

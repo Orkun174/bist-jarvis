@@ -1,502 +1,304 @@
-# live_inference.py
-"""Daily cross-sectional BIST scan and Telegram notification."""
+"""T-0 ingestion and schema-safe inference; importing this module runs no jobs.
 
+Dependencies: pandas numpy yfinance isyatirimhisse>=5.0.0 truststore xgboost
+The existing feature builder and NLP provider are injected, not reimplemented.
+History must use unadjusted TRY OHLC prices and share-count Volume.
+"""
 from __future__ import annotations
 
-# Configure timezone before importing market-data/application modules.
-import os
-import time
-
-os.environ["TZ"] = "Europe/Istanbul"
-if hasattr(time, "tzset"):
-    time.tzset()
-
-import json
+import importlib
 import logging
-import math
-from dataclasses import dataclass
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Mapping
-from zoneinfo import ZoneInfo
+from datetime import time
+from importlib.metadata import version
 
 import numpy as np
 import pandas as pd
-import requests
-from xgboost import XGBClassifier
 
-from core.ai_analyzer import (
-    BENCHMARK_TICKER,
-    FEATURE_COLUMNS,
-    FEATURE_CONTRACT_VERSION,
-    HISTORY_PERIOD,
-    MACRO_TICKERS,
-    PRICE_BASIS,
-    TARGET_DEFINITION,
-    VIX_PERCENTILE_COLUMN,
-    VIX_PERCENTILE_MIN_PERIODS,
-    VIX_PERCENTILE_WINDOW,
-    align_equity_to_benchmark,
-    build_macro_features,
-    build_stationary_features,
-    download_history,
-    feature_matrix,
-)
-
-ROOT = Path(__file__).resolve().parent
-MODEL_PATH = ROOT / "bist_xgb_model.json"
-ISTANBUL = ZoneInfo("Europe/Istanbul")
-LOGGER = logging.getLogger("bist_daily_scan")
-
-TOP_N = 3
-BASE_FRACTION = 0.25
-PAYOFF_RATIO = 1.5
-
-TICKERS = (
-    "THYAO.IS",
-    "BIMAS.IS",
-    "KCHOL.IS",
-    "FROTO.IS",
-    "TUPRS.IS",
-    "SAHOL.IS",
-    "GARAN.IS",
-    "AKBNK.IS",
-    "ISCTR.IS",
-    "YKBNK.IS",
-    "EREGL.IS",
-    "SISE.IS",
-    "ASELS.IS",
-    "TCELL.IS",
-    "ENKAI.IS",
-    "PGSUS.IS",
-    "TOASO.IS",
-    "MGROS.IS",
-    "TTKOM.IS",
-    "TAVHL.IS",
-)
+TRT = "Europe/Istanbul"
+LOG = logging.getLogger(__name__)
+OHLCV = ["Open", "High", "Low", "Close", "Volume"]
 
 
-class IstanbulFormatter(logging.Formatter):
-    def formatTime(
-        self,
-        record: logging.LogRecord,
-        datefmt: str | None = None,
-    ) -> str:
-        timestamp = datetime.fromtimestamp(record.created, ISTANBUL)
-        return timestamp.strftime(datefmt or "%Y-%m-%d %H:%M:%S %Z")
+def resolve(spec):
+    """Resolve an explicit existing integration function: package.module:name."""
+    module, name = spec.split(":", 1)
+    return getattr(importlib.import_module(module), name)
 
 
-@dataclass(frozen=True)
-class ModelBundle:
-    model: XGBClassifier
-    features: tuple[str, ...]
-    policy: dict[str, Any]
+def normalize_daily(frame):
+    result = frame.copy()
+    result.index = pd.DatetimeIndex(pd.to_datetime(result.index))
+    if result.index.tz is not None:
+        result.index = result.index.tz_convert(TRT).tz_localize(None)
+    result.index = result.index.normalize()
+    if result.index.has_duplicates:
+        raise ValueError("Duplicate daily bars.")
+    return result.sort_index()
 
 
-@dataclass(frozen=True)
-class Signal:
-    ticker: str
-    probability: float
-    score: float
-    conviction_proxy: int
-    close: float
+def flatten_yahoo(frame, ticker):
+    if frame is None or frame.empty:
+        raise ValueError("Yahoo returned no data.")
+    frame = frame.copy()
+    if isinstance(frame.columns, pd.MultiIndex):
+        levels = [
+            i for i in range(frame.columns.nlevels)
+            if ticker in frame.columns.get_level_values(i)
+        ]
+        if len(levels) != 1:
+            raise ValueError("Unexpected Yahoo column schema.")
+        frame = frame.xs(ticker, axis=1, level=levels[0])
+    return frame
 
 
-def configure_logging() -> None:
-    handler = logging.StreamHandler()
-    handler.setFormatter(
-        IstanbulFormatter("%(asctime)s %(levelname)s %(message)s")
+def is_close(symbol, day):
+    """The library returns raw HGDG_* columns, not Yahoo-style columns."""
+    if int(version("isyatirimhisse").split(".")[0]) < 5:
+        raise RuntimeError("isyatirimhisse >= 5.0.0 is required.")
+
+    from isyatirimhisse import fetch_stock_data
+
+    raw = fetch_stock_data(
+        symbols=symbol,
+        start_date=day.strftime("%d-%m-%Y"),
+        end_date=day.strftime("%d-%m-%Y"),
+        save_to_excel=False,
     )
-    LOGGER.handlers.clear()
-    LOGGER.addHandler(handler)
-    LOGGER.setLevel(logging.INFO)
-    LOGGER.propagate = False
+    required = {"HGDG_TARIH", "HGDG_HS_KODU", "HGDG_KAPANIS"}
+    if not isinstance(raw, pd.DataFrame) or not required.issubset(raw.columns):
+        raise ValueError("Unexpected Is Yatirim response schema.")
 
-
-def read_credentials() -> tuple[str, str]:
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
-    if not token or not chat_id:
-        raise RuntimeError(
-            "TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be configured."
-        )
-    return token, chat_id
-
-
-def metadata(model: XGBClassifier, name: str) -> Any:
-    raw = model.get_booster().attr(name)
-    if raw is None:
-        raise ValueError(f"Missing model metadata: {name}")
-    return json.loads(raw)
-
-
-def load_model() -> ModelBundle:
-    if not MODEL_PATH.is_file():
-        raise FileNotFoundError("bist_xgb_model.json is missing from the repository.")
-
-    model = XGBClassifier()
-    model.load_model(str(MODEL_PATH))
-    booster = model.get_booster()
-
-    expected = {
-        "feature_contract_version": FEATURE_CONTRACT_VERSION,
-        "target_definition": TARGET_DEFINITION,
-        "benchmark_ticker": BENCHMARK_TICKER,
-        "price_basis": PRICE_BASIS,
-    }
-    for name, value in expected.items():
-        if booster.attr(name) != value:
-            raise ValueError(f"Model contract mismatch: {name}")
-
-    selected = metadata(model, "selected_features")
-    if (
-        not isinstance(selected, list)
-        or not selected
-        or not all(isinstance(name, str) for name in selected)
-        or len(selected) != len(set(selected))
-        or not set(selected).issubset(FEATURE_COLUMNS)
-        or selected != booster.feature_names
-    ):
-        raise ValueError("Invalid model feature names or ordering.")
-
-    # The deployed model currently selects 18 features from the shared universe.
-    # Persisted names/order are authoritative; never substitute mock features.
-    if not np.array_equal(model.classes_, [0, 1]):
-        raise ValueError("The model must have binary classes [0, 1].")
-
-    policy = metadata(model, "threshold_policy")
-    if not isinstance(policy, dict):
-        raise ValueError("Invalid threshold policy.")
-    if (
-        policy.get("percentile_source") != "lagged_VIX_level"
-        or policy.get("window") != VIX_PERCENTILE_WINDOW
-        or policy.get("min_periods") != VIX_PERCENTILE_MIN_PERIODS
-    ):
-        raise ValueError("VIX policy differs from the shared feature pipeline.")
-
-    low = np.asarray(policy.get("low_regime"), dtype=float)
-    high = np.asarray(policy.get("high_regime"), dtype=float)
-    if low.shape != (3,) or high.shape != (3,):
-        raise ValueError("Invalid threshold regime dimensions.")
-    if not np.isfinite(np.concatenate((low, high))).all():
-        raise ValueError("Threshold policy contains nonfinite values.")
-    if not (
-        0 <= low[0] < high[0] <= 100
-        and 0 <= low[1] < low[2] <= 1
-        and 0 <= high[1] < high[2] <= 1
-    ):
-        raise ValueError("Invalid threshold regime bounds.")
-
-    return ModelBundle(model, tuple(selected), policy)
-
-
-def threshold_bounds(
-    percentile: float,
-    policy: Mapping[str, Any],
-) -> tuple[float, float]:
-    if not math.isfinite(percentile) or not 0 <= percentile <= 100:
-        raise ValueError("Current VIX percentile is unavailable.")
-
-    low = np.asarray(policy["low_regime"], dtype=float)
-    high = np.asarray(policy["high_regime"], dtype=float)
-    fraction = float(np.clip(
-        (percentile - low[0]) / (high[0] - low[0]), 0, 1
-    ))
-    lower = float(low[1] + fraction * (high[1] - low[1]))
-    upper = float(low[2] + fraction * (high[2] - low[2]))
-    return lower, upper
-
-
-def deterministic_conviction(
-    equity: pd.DataFrame,
-    cmf: float,
-) -> int:
-    """Match the backtest's CMF/OBV proxy; this is not a Qwen inference."""
-    obv = (
-        np.sign(equity["Close"].diff()).fillna(0.0) * equity["Volume"]
-    ).cumsum()
-    if len(obv) < 6 or not math.isfinite(cmf):
-        raise ValueError("Insufficient CMF/OBV history.")
-
-    change = float(obv.iloc[-1] - obv.iloc[-6])
-    if cmf > 0 and change > 0:
-        return 7
-    if cmf < 0 and change < 0:
-        return 3
-    return 5
-
-
-def scan(
-    bundle: ModelBundle,
-) -> tuple[list[Signal], dict[str, Any]]:
-    """Download macros once, construct shared features, and batch-score equities."""
-    histories: dict[str, pd.DataFrame] = {}
-    for symbol in dict.fromkeys(MACRO_TICKERS.values()):
-        LOGGER.info("Downloading macro history: %s", symbol)
-        histories[symbol] = download_history(symbol, HISTORY_PERIOD)
-
-    benchmark = histories[BENCHMARK_TICKER]
-    if benchmark.empty:
-        raise ValueError("Benchmark history is empty.")
-    as_of = benchmark.index[-1]
-
-    now = datetime.now(ISTANBUL)
-    age_days = (now.date() - as_of.date()).days
-    if age_days < 0 or age_days > 7:
-        raise ValueError("Benchmark data is stale or future-dated.")
-
-    macro_histories = {
-        name: histories[symbol] for name, symbol in MACRO_TICKERS.items()
-    }
-    macro_features = build_macro_features(
-        macro_histories, benchmark.index
-    )
-    percentile = float(
-        macro_features.loc[as_of, VIX_PERCENTILE_COLUMN]
-    )
-    lower, upper = threshold_bounds(percentile, bundle.policy)
-
-    rows: list[pd.DataFrame] = []
-    details: dict[str, tuple[int, float]] = {}
-    failures: dict[str, str] = {}
-
-    for ticker in TICKERS:
-        try:
-            LOGGER.info("Preparing equity: %s", ticker)
-            history = download_history(ticker, HISTORY_PERIOD)
-            aligned, observed = align_equity_to_benchmark(
-                history, benchmark.index
-            )
-            if aligned.empty or aligned.index[-1] != as_of:
-                raise ValueError("Missing the common benchmark session.")
-            if not bool(observed.iloc[-1]) or aligned["Volume"].iloc[-1] <= 0:
-                raise ValueError("Latest common-session OHLCV is incomplete.")
-
-            local = build_stationary_features(aligned, benchmark)
-            frame = local.join(macro_features, how="left").loc[[as_of]]
-            matrix = feature_matrix(frame, bundle.features)
-            matrix.index = pd.Index([ticker], name="Ticker")
-
-            proxy = deterministic_conviction(
-                aligned, float(local.loc[as_of, "CMF_20"])
-            )
-            close = float(aligned.loc[as_of, "Close"])
-            if not math.isfinite(close) or close <= 0:
-                raise ValueError("Invalid latest close.")
-
-            rows.append(matrix)
-            details[ticker] = (proxy, close)
-        except Exception as exc:
-            failures[ticker] = type(exc).__name__
-            LOGGER.warning(
-                "Equity unavailable: %s (%s)", ticker, type(exc).__name__
-            )
-
-    if not rows:
-        raise RuntimeError("No equities have valid features.")
-
-    matrix = pd.concat(rows, axis=0)
-    probabilities = bundle.model.predict_proba(matrix)[:, 1]
-    if (
-        not np.isfinite(probabilities).all()
-        or ((probabilities < 0) | (probabilities > 1)).any()
-    ):
-        raise ValueError("Invalid model probabilities.")
-
-    eligible: list[Signal] = []
-    for ticker, probability in zip(matrix.index, probabilities):
-        probability = float(probability)
-        proxy, close = details[str(ticker)]
-        kelly = (
-            probability * PAYOFF_RATIO - (1.0 - probability)
-        ) / PAYOFF_RATIO
-        score = float(np.clip(
-            BASE_FRACTION * (proxy / 10.0) * kelly, 0.0, 1.0
-        ))
-
-        if probability >= upper and score > 0:
-            eligible.append(
-                Signal(str(ticker), probability, score, proxy, close)
-            )
-
-    # Resolve ties deterministically using the configured universe order.
-    universe_order = {ticker: index for index, ticker in enumerate(TICKERS)}
-    eligible.sort(key=lambda item: (-item.score, universe_order[item.ticker]))
-
-    return eligible[:TOP_N], {
-        "as_of": as_of.date().isoformat(),
-        "scan_time": now.strftime("%Y-%m-%d %H:%M:%S"),
-        "vix_percentile": percentile,
-        "lower": lower,
-        "upper": upper,
-        "evaluated": len(matrix),
-        "universe_size": len(TICKERS),
-        "eligible_count": len(eligible),
-        "failures": failures,
-        "feature_count": len(bundle.features),
-        "age_days": age_days,
-    }
-
-
-def format_message(
-    selected: list[Signal],
-    diagnostics: Mapping[str, Any],
-) -> str:
-    lines = [
-        "📊 BIST AI Radar — Günlük Portföy Taraması",
-        f"🕒 Tarama: {diagnostics['scan_time']} (Europe/Istanbul)",
-        f"📅 Kullanılan fiyat seansı: {diagnostics['as_of']}",
-        (
-            f"🔎 Kapsama: {diagnostics['evaluated']}/"
-            f"{diagnostics['universe_size']} hisse"
-        ),
-        f"🌡️ VIX yüzdelik dilimi: %{diagnostics['vix_percentile']:.1f}",
-        (
-            f"🎯 Dinamik eşikler: %{100 * diagnostics['lower']:.2f} / "
-            f"%{100 * diagnostics['upper']:.2f}"
-        ),
-        "",
+    dates = pd.to_datetime(raw["HGDG_TARIH"], errors="raise").dt.date
+    rows = raw.loc[
+        (dates == day) & (raw["HGDG_HS_KODU"] == symbol)
     ]
+    if len(rows) != 1:
+        raise ValueError("Is Yatirim has not published exactly one T-0 row.")
 
-    failures = diagnostics["failures"]
-    if failures:
-        # A partial scan cannot establish the true top three of the universe.
-        lines.extend([
-            "⚠️ Evren taraması eksik; Top 3 portföy sinyali yayımlanmadı.",
-            "Verisi doğrulanamayan hisseler:",
-            ", ".join(ticker.removesuffix(".IS") for ticker in failures),
-            "Mevcut portföyün değiştirilmesi için sinyal üretilmedi.",
-        ])
-    elif not selected:
-        lines.extend([
-            "🔴 CASH — Hedef portföy %100 nakit.",
-            "Hiçbir hisse dinamik giriş eşiğini geçmedi.",
-        ])
-    else:
-        weight = 100.0 / len(selected)
-        lines.append("🟢 LONG — Eşit ağırlıklı hedef portföy")
-        for number, signal in enumerate(selected, start=1):
-            lines.extend([
-                (
-                    f"{number}. 🟢 {signal.ticker.removesuffix('.IS')} "
-                    f"| Hedef ağırlık %{weight:.2f}"
-                ),
-                (
-                    f"   XGB %{signal.probability * 100:.2f} "
-                    f"| Sıralama skoru {signal.score:.4f}"
-                ),
-                (
-                    f"   Teknik proxy {signal.conviction_proxy}/10 "
-                    f"| Kapanış ₺{signal.close:,.2f}"
-                ),
-            ])
-        lines.append(
-            "Listeden çıkan hisselerin hedef ağırlığı %0'dır."
-        )
-
-    lines.extend([
-        "",
-        "ℹ️ Olasılık, 5 seansta BIST100'ü geçme model skorudur.",
-        "Teknik proxy CMF + OBV kuralıdır; canlı Qwen yanıtı değildir.",
-        "Bildirim hedef dağılımdır; emir gönderilmez.",
-    ])
-
-    if diagnostics["age_days"] > 0:
-        lines.append(
-            "Veri katmanı yalnızca tamamlanmış barları kullanır; "
-            "bugünün mumu hariç tutulabilir."
-        )
-
-    message = "\n".join(lines)
-    if len(message) > 4096:
-        raise ValueError("Telegram message exceeds the supported length.")
-    return message
+    close = float(rows.iloc[0]["HGDG_KAPANIS"])
+    if not np.isfinite(close) or close <= 0:
+        raise ValueError("Invalid Is Yatirim closing price.")
+    return close
 
 
-def send_telegram(token: str, chat_id: str, message: str) -> None:
-    """Send once; retry only an explicit Telegram rate-limit rejection."""
-    endpoint = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message,
-        "disable_web_page_preview": True,
+def minute_bar(ticker, day):
+    """A timestamped proxy, not a guaranteed official auction close."""
+    import yfinance as yf
+
+    start = pd.Timestamp(day, tz=TRT)
+    raw = flatten_yahoo(
+        yf.download(
+            ticker,
+            start=start.to_pydatetime(),
+            end=(start + pd.Timedelta(days=1)).to_pydatetime(),
+            interval="1m",
+            auto_adjust=False,
+            prepost=False,
+            progress=False,
+            threads=False,
+            timeout=20,
+        ),
+        ticker,
+    )
+    if raw.index.tz is None:
+        raise ValueError("Minute bars have no timezone; refusing to guess.")
+
+    raw.index = raw.index.tz_convert(TRT)
+    cutoff = start + pd.Timedelta(hours=18, minutes=10)
+
+    # Strictly exclude the 18:10 bar and all later bars.
+    raw = raw.loc[
+        (raw.index >= start + pd.Timedelta(hours=9, minutes=55))
+        & (raw.index < cutoff)
+    ].sort_index()
+    raw = raw.loc[~raw.index.duplicated(keep="last"), OHLCV]
+    raw = raw.apply(pd.to_numeric, errors="raise")
+
+    if raw.empty or raw.isna().any().any() or not np.isfinite(raw).all().all():
+        raise ValueError("Incomplete or invalid T-0 minute data.")
+    if (raw[OHLCV[:4]] <= 0).any().any() or (raw.Volume < 0).any():
+        raise ValueError("Invalid minute price or volume.")
+
+    # Reject stale/half-day data instead of treating it as a normal close.
+    if cutoff - raw.index[-1] > pd.Timedelta(minutes=10):
+        raise ValueError("Last minute is too old for the 18:10 cutoff.")
+    if raw.index[0] > start + pd.Timedelta(hours=10, minutes=5):
+        raise ValueError("Minute history misses the session opening.")
+
+    return {
+        "Open": float(raw.Open.iloc[0]),
+        "High": float(raw.High.max()),
+        "Low": float(raw.Low.min()),
+        "Close": float(raw.Close.iloc[-1]),
+        "Volume": float(raw.Volume.sum()),
+    }, raw.index[-1].isoformat()
+
+
+def fetch_t0(ticker, as_of, require_ohlcv=True):
+    symbol = ticker.upper().removesuffix(".IS")
+    ticker = symbol + ".IS"
+    day = as_of.date()
+    primary_error = None
+
+    try:
+        close = is_close(symbol, day)
+    except Exception as exc:
+        primary_error = str(exc)
+        LOG.warning("Primary T-0 close failed: %s", exc)
+        close = None
+
+    # Do not assume the Is Yatirim close endpoint provides Open or share volume.
+    # TRY turnover must never be substituted for share-count Volume.
+    proxy, minute_time = None, None
+    if close is None or require_ohlcv:
+        try:
+            proxy, minute_time = minute_bar(ticker, day)
+        except Exception:
+            if close is None or require_ohlcv:
+                raise RuntimeError("No valid T-0 bar; inference aborted.")
+
+    bar = proxy or {name: np.nan for name in OHLCV}
+    if close is not None:
+        bar["Close"] = close
+
+        # Preserve OHLC consistency when the official close includes auction
+        # trades absent from the minute feed. Other fields remain proxies.
+        if proxy:
+            bar["High"] = max(bar["High"], close)
+            bar["Low"] = min(bar["Low"], close)
+
+    return pd.DataFrame([bar], index=[pd.Timestamp(day)]), {
+        "close_source": (
+            "isyatirimhisse" if close is not None else "yahoo_1m_proxy"
+        ),
+        "ohlv_source": "yahoo_1m_proxy" if proxy else "unavailable",
+        "last_minute": minute_time,
+        "primary_error": primary_error,
     }
 
-    for attempt in range(3):
-        try:
-            response = requests.post(
-                endpoint,
-                json=payload,
-                timeout=(10, 40),
-                allow_redirects=False,
-            )
-        except requests.RequestException:
-            # Do not print exception text: it may contain the token-bearing URL.
-            # A timeout may occur after delivery, so avoid blind duplicate sends.
-            raise RuntimeError(
-                "Telegram connection failed; delivery status is unknown."
-            ) from None
 
-        try:
-            result = response.json()
-        except ValueError:
-            raise RuntimeError(
-                f"Telegram returned invalid JSON (HTTP {response.status_code})."
-            ) from None
+def align_and_predict(model, df):
+    names = model.get_booster().feature_names
+    if not names or len(set(names)) != len(names):
+        raise ValueError("Deployed model has no valid named feature contract.")
+    if df.columns.has_duplicates:
+        raise ValueError("Duplicate input feature names.")
 
-        if response.status_code == 429 and attempt < 2:
-            retry_after = result.get("parameters", {}).get("retry_after", 5)
-            delay = min(max(float(retry_after), 1.0), 60.0)
-            time.sleep(delay)
-            continue
-
-        if response.status_code != 200 or not result.get("ok", False):
-            raise RuntimeError(
-                f"Telegram rejected the message (HTTP {response.status_code})."
-            )
-
-        LOGGER.info("Telegram message sent successfully.")
-        return
-
-    raise RuntimeError("Telegram rate-limit retries exhausted.")
-
-
-def main() -> int:
-    configure_logging()
-
-    try:
-        token, chat_id = read_credentials()
-    except Exception as exc:
-        LOGGER.error("%s", exc)
-        return 1
-
-    try:
-        bundle = load_model()
-        selected, diagnostics = scan(bundle)
-        message = format_message(selected, diagnostics)
-    except Exception as exc:
-        LOGGER.error("Scan failed (%s).", type(exc).__name__)
-        timestamp = datetime.now(ISTANBUL).strftime("%Y-%m-%d %H:%M:%S")
-        message = (
-            "⚠️ BIST AI Radar — Tarama tamamlanamadı\n"
-            f"🕒 {timestamp} (Europe/Istanbul)\n"
-            f"Hata sınıfı: {type(exc).__name__}\n"
-            "Yeni portföy sinyali üretilmedi. GitHub Actions kayıtlarını kontrol edin."
+    missing = set(names) - set(df.columns)
+    if missing:
+        raise ValueError(
+            f"Required model features are missing: {sorted(missing)}"
         )
-        try:
-            send_telegram(token, chat_id, message)
-        except RuntimeError as notification_error:
-            LOGGER.error("%s", notification_error)
-        return 1
+    if not np.isfinite(df.loc[:, names].to_numpy(dtype=float)).all():
+        raise ValueError("Required model features contain NaN or infinity.")
 
-    try:
-        send_telegram(token, chat_id, message)
-    except RuntimeError as exc:
-        LOGGER.error("%s", exc)
-        return 1
+    # Old model: news_sentiment is dropped.
+    # Retrained model: news_sentiment is retained in its trained position.
+    # Do not disable XGBoost feature validation.
+    df = df.reindex(columns=model.get_booster().feature_names)
+    return model.predict(df)
 
-    return 1 if diagnostics["failures"] else 0
+
+def run_live(
+    ticker,
+    history,
+    model,
+    feature_builder,
+    sentiment_provider,
+    *,
+    require_ohlcv=True,
+    as_of=None,
+):
+    """Run one live inference.
+
+    sentiment_provider(ticker, cutoff) -> finite scalar in [-1, 1].
+
+    feature_builder receives unadjusted daily bars and must preserve their
+    DatetimeIndex. Reuse the SAME causal builder in retraining.
+
+    The NLP provider must implement the same model, label mapping, daily
+    aggregation and forward-fill policy used during retraining.
+    """
+    now = (
+        pd.Timestamp.now(tz=TRT)
+        if as_of is None
+        else pd.Timestamp(as_of)
+    )
+    if now.tzinfo is None:
+        raise ValueError("as_of must be timezone-aware.")
+    now = now.tz_convert(TRT)
+    if now.time() < time(18, 30):
+        raise ValueError("Run at or after 18:30 TRT.")
+
+    # Late cron execution must not incorporate news published after 18:30.
+    cutoff = now.normalize() + pd.Timedelta(hours=18, minutes=30)
+    history = normalize_daily(history)
+    today = pd.Timestamp(now.date())
+    history = history.loc[history.index < today]
+    if history.empty:
+        raise ValueError("Historical warm-up bars are required.")
+
+    bar, provenance = fetch_t0(ticker, cutoff, require_ohlcv)
+    bars = pd.concat([history, bar]).sort_index()
+    features = feature_builder(bars.copy())
+
+    if not isinstance(features, pd.DataFrame) or not features.index.is_unique:
+        raise ValueError(
+            "Feature builder must return a uniquely indexed DataFrame."
+        )
+    if today not in features.index:
+        raise ValueError("Feature builder did not produce T-0 features.")
+
+    df = features.loc[[today]].copy()
+    sentiment = float(sentiment_provider(ticker, cutoff))
+    if not np.isfinite(sentiment) or not -1 <= sentiment <= 1:
+        raise ValueError("Invalid news_sentiment; inference aborted.")
+
+    df["news_sentiment"] = sentiment
+    prediction = align_and_predict(model, df)
+
+    return {
+        "date": str(today.date()),
+        "prediction": prediction.tolist(),
+        "news_sentiment": sentiment,
+        "provenance": provenance,
+    }
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import argparse
+    import json
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--ticker", required=True)
+    parser.add_argument(
+        "--history", required=True, help="Daily CSV with a Date column"
+    )
+    parser.add_argument(
+        "--features", required=True, help="Existing module:function"
+    )
+    parser.add_argument(
+        "--sentiment-provider", required=True, help="nlp_engine:function"
+    )
+    parser.add_argument(
+        "--model-factory", required=True, help="Existing module:function"
+    )
+    parser.add_argument("--close-only", action="store_true")
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO)
+    model = resolve(args.model_factory)()
+    model.load_model("model.json")
+    history = pd.read_csv(
+        args.history, index_col="Date", parse_dates=["Date"]
+    )
+
+    result = run_live(
+        args.ticker,
+        history,
+        model,
+        resolve(args.features),
+        resolve(args.sentiment_provider),
+        require_ohlcv=not args.close_only,
+    )
+    print(json.dumps(result, ensure_ascii=False))
