@@ -30,6 +30,12 @@ Default historical price file:
 Supported date columns:
     Date, date, datetime, timestamp, Seans Tarihi
 
+Price retrieval:
+    1. Is Yatirim closing price.
+    2. Yahoo minute OHLCV when required or when the primary close is unavailable.
+    3. Yahoo daily OHLCV for the exact requested date if minute retrieval or
+       validation fails.
+
 The built-in sentiment adapter scores available same-day headlines published
 at or before the inference cutoff. It returns 0.0 when no eligible headlines
 exist. Network/model failures are not silently converted into neutral scores.
@@ -167,7 +173,7 @@ def configure_sentiment_provider(model):
 def live_sentiment_provider(ticker, cutoff) -> float:
     """Return the mean sentiment of eligible same-day news in [-1, 1].
 
-    Uses the project's verified functions:
+    Uses:
         core.market_data.fetch_news(ticker, limit=5)
         retrain_model.score_corpus(news, model_path, labels)
 
@@ -188,7 +194,6 @@ def live_sentiment_provider(ticker, cutoff) -> float:
 
     from core.market_data import fetch_news
 
-    # This project's helper supports limits from 1 through 5.
     try:
         articles = fetch_news(symbol, limit=5)
     except Exception as exc:
@@ -258,8 +263,6 @@ def live_sentiment_provider(ticker, cutoff) -> float:
         return 0.0
 
     # Importing retrain_model does not execute its guarded main().
-    # Its scorer keeps the same probability-weighted label calculation,
-    # batch_size=32, truncation=True, and maximum token length as training.
     from retrain_model import score_corpus
 
     news = pd.DataFrame(eligible)
@@ -515,6 +518,8 @@ def minute_bar(ticker, day):
     if (raw[OHLCV[:4]] <= 0).any().any() or (raw.Volume < 0).any():
         raise ValueError("Invalid minute price or volume.")
 
+    # Keep strict minute validation. fetch_t0 catches these failures and
+    # attempts the exact-date daily fallback instead of aborting immediately.
     if cutoff - raw.index[-1] > pd.Timedelta(minutes=10):
         raise ValueError("Last minute is too old for the 18:10 cutoff.")
 
@@ -530,63 +535,194 @@ def minute_bar(ticker, day):
     }, raw.index[-1].isoformat()
 
 
+def daily_bar(ticker, day):
+    """Fetch and validate Yahoo daily OHLCV for exactly the requested date."""
+    import yfinance as yf
+
+    target = pd.Timestamp(day).normalize()
+    end = target + pd.Timedelta(days=1)
+
+    # Yahoo's end date is exclusive.
+    raw = flatten_yahoo(
+        yf.download(
+            ticker,
+            start=target.date().isoformat(),
+            end=end.date().isoformat(),
+            interval="1d",
+            auto_adjust=False,
+            prepost=False,
+            progress=False,
+            threads=False,
+            timeout=30,
+        ),
+        ticker,
+    )
+
+    missing = sorted(set(OHLCV) - set(raw.columns))
+    if missing:
+        raise ValueError(
+            f"Yahoo daily data is missing OHLCV columns: {missing}."
+        )
+
+    raw = normalize_daily(raw)
+    rows = raw.loc[raw.index == target, OHLCV]
+
+    # Never relabel a neighboring session as the requested date.
+    if len(rows) != 1:
+        raise ValueError(
+            f"Yahoo has no unique daily bar for "
+            f"{ticker} on {target.date()}."
+        )
+
+    rows = rows.apply(pd.to_numeric, errors="raise")
+
+    if rows.isna().any().any() or not np.isfinite(rows).all().all():
+        raise ValueError(
+            f"Yahoo daily bar contains missing or nonfinite values "
+            f"for {ticker} on {target.date()}."
+        )
+
+    bar = {
+        column: float(rows.iloc[0][column])
+        for column in OHLCV
+    }
+
+    if any(bar[column] <= 0 for column in OHLCV[:4]):
+        raise ValueError("Yahoo daily prices must be positive.")
+
+    if bar["Volume"] < 0:
+        raise ValueError("Yahoo daily volume must be nonnegative.")
+
+    if (
+        bar["High"] < max(bar["Open"], bar["Close"])
+        or bar["Low"] > min(bar["Open"], bar["Close"])
+        or bar["High"] < bar["Low"]
+    ):
+        raise ValueError("Yahoo daily OHLC values are inconsistent.")
+
+    return bar
+
+
 def fetch_t0(ticker, as_of, require_ohlcv=True):
-    """Prefer Is Yatirim close; supplement or fall back to minute data."""
+    """Retrieve the requested bar using primary, minute, and daily sources.
+
+    A minute-fetch or minute-validation failure now triggers Yahoo daily
+    retrieval for the exact as_of date.
+
+    When the daily fallback is used, its complete OHLCV bar is returned
+    together rather than mixing the daily bar with another provider's close.
+    """
     symbol = ticker.upper().removesuffix(".IS")
     yahoo_ticker = symbol + ".IS"
     day = as_of.date()
+
     primary_error = None
+    minute_error = None
 
     try:
         close = is_close(symbol, day)
     except Exception as exc:
         primary_error = str(exc)
-        LOG.warning("Primary T-0 close failed: %s", exc)
+        LOG.warning(
+            "Primary close failed for %s on %s: %s",
+            symbol,
+            day,
+            exc,
+        )
         close = None
 
-    proxy = None
-    minute_time = None
-
-    # Do not substitute TRY turnover for share-count Volume.
-    if close is None or require_ohlcv:
-        try:
-            proxy, minute_time = minute_bar(yahoo_ticker, day)
-        except Exception as exc:
-            raise RuntimeError(
-                "No valid T-0 bar; inference aborted."
-            ) from exc
-
-    bar = (
-        dict(proxy)
-        if proxy is not None
-        else {name: np.nan for name in OHLCV}
-    )
-
-    if close is not None:
+    # Preserve the close-only path when the primary source succeeds.
+    if close is not None and not require_ohlcv:
+        bar = {name: np.nan for name in OHLCV}
         bar["Close"] = close
 
-        if proxy is not None:
-            # Official close may include auction trades absent from the feed.
+        return pd.DataFrame(
+            [bar],
+            index=[pd.Timestamp(day)],
+        ), {
+            "close_source": "isyatirimhisse",
+            "ohlv_source": "unavailable",
+            "last_minute": None,
+            "primary_error": primary_error,
+            "minute_error": None,
+            "daily_fallback_used": False,
+        }
+
+    # Retrieve minute OHLCV either to supplement the primary close or to
+    # provide the entire bar when Is Yatirim is unavailable.
+    try:
+        proxy, minute_time = minute_bar(yahoo_ticker, day)
+        bar = dict(proxy)
+
+        if close is not None:
+            bar["Close"] = close
             bar["High"] = max(bar["High"], close)
             bar["Low"] = min(bar["Low"], close)
 
-    return pd.DataFrame(
-        [bar],
-        index=[pd.Timestamp(day)],
-    ), {
-        "close_source": (
-            "isyatirimhisse"
-            if close is not None
-            else "yahoo_1m_proxy"
-        ),
-        "ohlv_source": (
-            "yahoo_1m_proxy"
-            if proxy is not None
-            else "unavailable"
-        ),
-        "last_minute": minute_time,
-        "primary_error": primary_error,
-    }
+        return pd.DataFrame(
+            [bar],
+            index=[pd.Timestamp(day)],
+        ), {
+            "close_source": (
+                "isyatirimhisse"
+                if close is not None
+                else "yahoo_1m_proxy"
+            ),
+            "ohlv_source": "yahoo_1m_proxy",
+            "last_minute": minute_time,
+            "primary_error": primary_error,
+            "minute_error": None,
+            "daily_fallback_used": False,
+        }
+
+    except Exception as exc:
+        minute_error = str(exc)
+        LOG.warning(
+            "Minute proxy failed for %s on %s: %s. "
+            "Trying exact-date Yahoo daily OHLCV.",
+            symbol,
+            day,
+            exc,
+        )
+
+    # This catches strict 18:10 freshness failures, unavailable historical
+    # minute data, missing opening minutes, and other minute-source errors.
+    try:
+        bar = daily_bar(yahoo_ticker, day)
+
+        LOG.info(
+            "Yahoo daily fallback succeeded for %s on %s.",
+            symbol,
+            day,
+        )
+
+        return pd.DataFrame(
+            [bar],
+            index=[pd.Timestamp(day)],
+        ), {
+            "close_source": "yahoo_1d",
+            "ohlv_source": "yahoo_1d",
+            "last_minute": None,
+            "primary_error": primary_error,
+            "minute_error": minute_error,
+            "daily_fallback_used": True,
+        }
+
+    except Exception as exc:
+        LOG.error(
+            "Yahoo daily fallback failed for %s on %s: %s",
+            symbol,
+            day,
+            exc,
+        )
+
+        raise RuntimeError(
+            f"No valid OHLCV bar for {symbol} on {day}. "
+            f"Is Yatirim: {primary_error or 'close available, full OHLCV required'}. "
+            f"Yahoo minute: {minute_error}. "
+            f"Yahoo daily: {exc}. "
+            "No neighboring-date or fabricated bar was substituted."
+        ) from exc
 
 
 def align_and_predict(model, df):
