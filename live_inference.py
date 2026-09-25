@@ -706,8 +706,8 @@ def run_live(
 
     now = now.tz_convert(TRT)
 
-    if now.time() < time(18, 30):
-        raise ValueError("Run at or after 18:30 TRT.")
+    #if now.time() < time(18, 30):
+     #   raise ValueError("Run at or after 18:30 TRT.")
 
     symbol = ticker.upper().removesuffix(".IS")
     cutoff = now.normalize() + pd.Timedelta(hours=18, minutes=30)
