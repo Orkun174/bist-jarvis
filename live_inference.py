@@ -12,6 +12,8 @@ Optional local .env support:
 Project integrations:
     core.ai_analyzer:build_pipeline_features
     core.ai_analyzer:get_model
+    core.ai_analyzer.build_macro_features
+    core.ai_analyzer.MACRO_TICKERS
     core.market_data.fetch_news
     retrain_model.score_corpus
 
@@ -32,18 +34,22 @@ Supported date columns:
 
 Price retrieval:
     1. Is Yatirim closing price.
-    2. Yahoo minute OHLCV when required or when the primary close is unavailable.
-    3. Yahoo daily OHLCV for the exact requested date if minute retrieval or
-       validation fails.
+    2. Yahoo minute OHLCV.
+    3. Exact-date Yahoo daily OHLCV if minute retrieval or validation fails.
 
-The built-in sentiment adapter scores available same-day headlines published
-at or before the inference cutoff. It returns 0.0 when no eligible headlines
-exist. Network/model failures are not silently converted into neutral scores.
+Macro features:
+    Reuse core.ai_analyzer.build_macro_features, which matches macro_* names.
+    This preserves fractional return units, native-market rolling means,
+    next-calendar-day availability, and the seven-day staleness mask.
+    Macro downloads exclude the requested inference date and all later dates.
 
-The existing fetch_news helper supplies at most five headlines. This live
-headline sample is narrower than the historical KAP/RSS training corpus.
+Sentiment:
+    Scores available same-day headlines published no later than the cutoff.
+    Returns 0.0 when no eligible headlines exist.
+    The existing fetch_news helper supplies at most five headlines.
+    Retrieval/model failures are not silently converted into neutral scores.
 
-Importing this module does not execute inference or send notifications.
+Importing this module does not run inference or send notifications.
 """
 
 from __future__ import annotations
@@ -71,7 +77,6 @@ DEFAULT_SENTIMENT_LABELS = {
     "LABEL_1": 1.0,
 }
 
-# main() updates these from the deployed model's training metadata.
 _SENTIMENT_MODEL = DEFAULT_SENTIMENT_MODEL
 _SENTIMENT_LABELS = dict(DEFAULT_SENTIMENT_LABELS)
 
@@ -80,7 +85,6 @@ def resolve(spec):
     """Resolve a project function or this module's built-in adapter."""
     module_name, function_name = spec.split(":", 1)
 
-    # Avoid importing a second copy of this script when executed directly.
     if module_name in {
         "__main__",
         __name__,
@@ -100,7 +104,7 @@ def resolve(spec):
 
 
 def load_local_environment():
-    """Load .env beside this script without overriding existing CI secrets."""
+    """Load .env without overriding existing CI secrets."""
     env_path = Path(__file__).resolve().parent / ".env"
     if not env_path.is_file():
         return
@@ -124,17 +128,18 @@ def load_local_environment():
 
 
 def configure_sentiment_provider(model):
-    """Reuse the NLP checkpoint and label map recorded during retraining."""
+    """Reuse the NLP checkpoint and labels recorded during retraining."""
     global _SENTIMENT_MODEL, _SENTIMENT_LABELS
 
     booster = model.get_booster()
     saved_model = booster.attr("sentiment_model")
     saved_labels = booster.attr("sentiment_labels")
 
-    if saved_model:
-        _SENTIMENT_MODEL = saved_model.strip()
-    else:
-        _SENTIMENT_MODEL = DEFAULT_SENTIMENT_MODEL
+    _SENTIMENT_MODEL = (
+        saved_model.strip()
+        if saved_model
+        else DEFAULT_SENTIMENT_MODEL
+    )
 
     if saved_labels:
         try:
@@ -171,16 +176,7 @@ def configure_sentiment_provider(model):
 
 
 def live_sentiment_provider(ticker, cutoff) -> float:
-    """Return the mean sentiment of eligible same-day news in [-1, 1].
-
-    Uses:
-        core.market_data.fetch_news(ticker, limit=5)
-        retrain_model.score_corpus(news, model_path, labels)
-
-    Only dated headlines from the cutoff's Turkish calendar day, published
-    no later than the cutoff, are scored. No eligible news returns 0.0.
-    Retrieval or NLP failures propagate instead of masquerading as no news.
-    """
+    """Return mean sentiment for eligible same-day news in [-1, 1]."""
     cutoff = pd.Timestamp(cutoff)
 
     if pd.isna(cutoff) or cutoff.tzinfo is None:
@@ -202,7 +198,9 @@ def live_sentiment_provider(ticker, cutoff) -> float:
         ) from exc
 
     if not isinstance(articles, list):
-        raise TypeError("fetch_news must return a list of news dictionaries.")
+        raise TypeError(
+            "fetch_news must return a list of news dictionaries."
+        )
 
     eligible = []
     seen = set()
@@ -382,7 +380,7 @@ def load_history_csv(path, require_ohlcv=True):
 
 
 def normalize_daily(frame):
-    """Normalize daily bar dates without inventing trading sessions."""
+    """Normalize stock-bar dates without inventing trading sessions."""
     result = frame.copy()
     result.index = pd.DatetimeIndex(pd.to_datetime(result.index))
 
@@ -423,7 +421,7 @@ def flatten_yahoo(frame, ticker):
 
 
 def is_close(symbol, day):
-    """Read a validated T-0 close from isyatirimhisse v5+."""
+    """Read a validated requested-date close from isyatirimhisse v5+."""
     if int(version("isyatirimhisse").split(".")[0]) < 5:
         raise RuntimeError("isyatirimhisse >= 5.0.0 is required.")
 
@@ -457,7 +455,7 @@ def is_close(symbol, day):
 
     if len(rows) != 1:
         raise ValueError(
-            "Is Yatirim has not published exactly one T-0 row."
+            "Is Yatirim has not published exactly one requested-date row."
         )
 
     close = float(rows.iloc[0]["HGDG_KAPANIS"])
@@ -513,13 +511,11 @@ def minute_bar(ticker, day):
         or raw.isna().any().any()
         or not np.isfinite(raw).all().all()
     ):
-        raise ValueError("Incomplete or invalid T-0 minute data.")
+        raise ValueError("Incomplete or invalid requested-date minute data.")
 
     if (raw[OHLCV[:4]] <= 0).any().any() or (raw.Volume < 0).any():
         raise ValueError("Invalid minute price or volume.")
 
-    # Keep strict minute validation. fetch_t0 catches these failures and
-    # attempts the exact-date daily fallback instead of aborting immediately.
     if cutoff - raw.index[-1] > pd.Timedelta(minutes=10):
         raise ValueError("Last minute is too old for the 18:10 cutoff.")
 
@@ -536,13 +532,12 @@ def minute_bar(ticker, day):
 
 
 def daily_bar(ticker, day):
-    """Fetch and validate Yahoo daily OHLCV for exactly the requested date."""
+    """Fetch Yahoo daily OHLCV for exactly the requested date."""
     import yfinance as yf
 
     target = pd.Timestamp(day).normalize()
     end = target + pd.Timedelta(days=1)
 
-    # Yahoo's end date is exclusive.
     raw = flatten_yahoo(
         yf.download(
             ticker,
@@ -567,7 +562,6 @@ def daily_bar(ticker, day):
     raw = normalize_daily(raw)
     rows = raw.loc[raw.index == target, OHLCV]
 
-    # Never relabel a neighboring session as the requested date.
     if len(rows) != 1:
         raise ValueError(
             f"Yahoo has no unique daily bar for "
@@ -604,14 +598,7 @@ def daily_bar(ticker, day):
 
 
 def fetch_t0(ticker, as_of, require_ohlcv=True):
-    """Retrieve the requested bar using primary, minute, and daily sources.
-
-    A minute-fetch or minute-validation failure now triggers Yahoo daily
-    retrieval for the exact as_of date.
-
-    When the daily fallback is used, its complete OHLCV bar is returned
-    together rather than mixing the daily bar with another provider's close.
-    """
+    """Retrieve the requested bar using primary, minute, and daily sources."""
     symbol = ticker.upper().removesuffix(".IS")
     yahoo_ticker = symbol + ".IS"
     day = as_of.date()
@@ -631,7 +618,6 @@ def fetch_t0(ticker, as_of, require_ohlcv=True):
         )
         close = None
 
-    # Preserve the close-only path when the primary source succeeds.
     if close is not None and not require_ohlcv:
         bar = {name: np.nan for name in OHLCV}
         bar["Close"] = close
@@ -648,8 +634,6 @@ def fetch_t0(ticker, as_of, require_ohlcv=True):
             "daily_fallback_used": False,
         }
 
-    # Retrieve minute OHLCV either to supplement the primary close or to
-    # provide the entire bar when Is Yatirim is unavailable.
     try:
         proxy, minute_time = minute_bar(yahoo_ticker, day)
         bar = dict(proxy)
@@ -685,8 +669,6 @@ def fetch_t0(ticker, as_of, require_ohlcv=True):
             exc,
         )
 
-    # This catches strict 18:10 freshness failures, unavailable historical
-    # minute data, missing opening minutes, and other minute-source errors.
     try:
         bar = daily_bar(yahoo_ticker, day)
 
@@ -725,6 +707,218 @@ def fetch_t0(ticker, as_of, require_ohlcv=True):
         ) from exc
 
 
+def fetch_macro_history(symbol, as_of, lookback_days=730):
+    """Fetch adjusted macro closes strictly before the requested TRT date.
+
+    Preserve native-market session labels, matching ai_analyzer.download_history.
+    Do not use that helper directly: it excludes today's real-world date,
+    rather than accepting an explicit historical as_of boundary.
+    """
+    import yfinance as yf
+
+    cutoff = pd.Timestamp(as_of)
+    if pd.isna(cutoff) or cutoff.tzinfo is None:
+        raise ValueError("Macro as_of must be timezone-aware.")
+
+    end = cutoff.tz_convert(TRT).tz_localize(None).normalize()
+    start = end - pd.Timedelta(days=lookback_days)
+
+    raw = flatten_yahoo(
+        yf.download(
+            symbol,
+            start=start.date().isoformat(),
+            end=end.date().isoformat(),
+            interval="1d",
+            auto_adjust=True,
+            prepost=False,
+            progress=False,
+            threads=False,
+            timeout=30,
+        ),
+        symbol,
+    )
+
+    if "Close" not in raw.columns:
+        raise ValueError(f"Macro source {symbol} has no Close column.")
+
+    history = raw.loc[:, ["Close"]].copy()
+    index = pd.DatetimeIndex(pd.to_datetime(history.index))
+
+    # Daily dates identify native exchange sessions. Strip timezone without
+    # moving those labels to a different market's calendar.
+    if index.tz is not None:
+        index = index.tz_localize(None)
+
+    history.index = index.normalize()
+    history = history.sort_index()
+    history = history.loc[
+        (history.index >= start)
+        & (history.index < end)
+    ]
+
+    if history.index.isna().any() or history.index.has_duplicates:
+        raise ValueError(
+            f"Macro source {symbol} contains invalid or duplicate dates."
+        )
+
+    if len(history) < 6:
+        raise ValueError(
+            f"Macro source {symbol} has insufficient history before {end.date()}."
+        )
+
+    history["Close"] = pd.to_numeric(
+        history["Close"],
+        errors="raise",
+    ).astype(float)
+
+    close = history["Close"].to_numpy()
+    if not np.isfinite(close).all() or (close <= 0).any():
+        raise ValueError(
+            f"Macro source {symbol} contains invalid closing prices."
+        )
+
+    LOG.info(
+        "Macro %s: %d native sessions, latest source date %s.",
+        symbol,
+        len(history),
+        history.index[-1].date(),
+    )
+
+    return history
+
+
+def append_required_macro_features(model, df, as_of):
+    """Populate required macro columns using the verified project builder.
+
+    core.ai_analyzer.build_macro_features:
+        returns = Close.pct_change(fill_method=None)
+        five_day_mean = returns.rolling(5).mean()
+        availability = source_session_date + one calendar day
+        alignment = union calendar, then forward-fill
+        stale data = unavailable after seven calendar days
+
+    The builder in core.training_data uses a different naming/units contract
+    and must not be substituted for these macro_* model columns.
+    """
+    names = model.get_booster().feature_names
+    if not names:
+        raise ValueError("The deployed model has no named feature contract.")
+
+    required = [
+        name
+        for name in names
+        if name.startswith("macro_") or name == "VIX_Percentile"
+    ]
+
+    if not required:
+        return df
+
+    # Respect complete, valid macro features already supplied by a custom
+    # feature builder. Otherwise rebuild all required macro columns together.
+    if all(name in df.columns for name in required):
+        existing = df.loc[:, required].apply(
+            pd.to_numeric,
+            errors="coerce",
+        )
+        if np.isfinite(existing.to_numpy(dtype=float)).all():
+            return df
+
+    from core import ai_analyzer
+
+    known = set(ai_analyzer.MACRO_FEATURE_COLUMNS)
+    known.add(ai_analyzer.VIX_PERCENTILE_COLUMN)
+
+    unknown = sorted(set(required) - known)
+    if unknown:
+        raise ValueError(
+            "The deployed macro feature names do not match "
+            f"core.ai_analyzer.build_macro_features: {unknown}"
+        )
+
+    calendar = pd.DatetimeIndex(df.index)
+    if (
+        calendar.tz is not None
+        or calendar.has_duplicates
+        or calendar.isna().any()
+        or not calendar.is_monotonic_increasing
+    ):
+        raise ValueError(
+            "Macro alignment requires unique, sorted, timezone-naive dates."
+        )
+
+    cutoff = pd.Timestamp(as_of)
+    if pd.isna(cutoff) or cutoff.tzinfo is None:
+        raise ValueError("Macro as_of must be timezone-aware.")
+
+    inference_day = (
+        cutoff.tz_convert(TRT)
+        .tz_localize(None)
+        .normalize()
+    )
+
+    # run_live passes its requested-date row, never future rows.
+    if not calendar.equals(pd.DatetimeIndex([inference_day])):
+        raise ValueError(
+            "Macro enrichment expects exactly the requested inference-date row."
+        )
+
+    histories = {}
+    for name, symbol in ai_analyzer.MACRO_TICKERS.items():
+        try:
+            histories[name] = fetch_macro_history(symbol, cutoff)
+        except Exception as exc:
+            raise RuntimeError(
+                f"Macro retrieval failed for {name} ({symbol}) "
+                f"before {inference_day.date()}."
+            ) from exc
+
+    # Reuse project calculations directly; do not approximate with zeros,
+    # multiply by 100, or reimplement the lag as a stock-row shift.
+    macro_frame = ai_analyzer.build_macro_features(
+        histories,
+        calendar,
+    )
+
+    missing = sorted(set(required) - set(macro_frame.columns))
+    if missing:
+        raise ValueError(
+            f"The project macro builder did not produce: {missing}"
+        )
+
+    selected = macro_frame.reindex(
+        index=calendar,
+        columns=required,
+    ).apply(pd.to_numeric, errors="raise")
+
+    valid = np.isfinite(selected.to_numpy(dtype=float))
+    if not valid.all():
+        invalid_columns = [
+            column
+            for column, column_valid in zip(
+                selected.columns,
+                valid.all(axis=0),
+            )
+            if not column_valid
+        ]
+        raise ValueError(
+            f"Macro features are unavailable for {inference_day.date()}: "
+            f"{invalid_columns}. Check source outages, rolling warm-up, "
+            "and the project's seven-day staleness limit."
+        )
+
+    result = df.copy()
+    for column in required:
+        result[column] = selected[column]
+
+    LOG.info(
+        "Appended %d model-required macro feature(s) for %s.",
+        len(required),
+        inference_day.date(),
+    )
+
+    return result
+
+
 def align_and_predict(model, df):
     """Align features to the deployed XGBoost schema."""
     names = model.get_booster().feature_names
@@ -738,7 +932,6 @@ def align_and_predict(model, df):
         raise ValueError("Duplicate input feature names.")
 
     missing = set(names) - set(df.columns)
-
     if missing:
         raise ValueError(
             f"Required model features are missing: {sorted(missing)}"
@@ -751,7 +944,6 @@ def align_and_predict(model, df):
             "Required model features contain NaN or infinity."
         )
 
-    # Preserve exact training order and drop extras for legacy models.
     df = df.reindex(columns=model.get_booster().feature_names)
     return model.predict(df)
 
@@ -759,7 +951,6 @@ def align_and_predict(model, df):
 def prediction_probabilities(model, df):
     """Return actual classifier probabilities when supported."""
     predict_proba = getattr(model, "predict_proba", None)
-
     if not callable(predict_proba):
         return None
 
@@ -809,7 +1000,6 @@ def read_holdout_score(model):
     """Read saved validation metadata, not a prediction probability."""
     try:
         raw = model.get_booster().attr("holdout_score")
-
         if raw is None or raw == "not_evaluated":
             return None
 
@@ -830,7 +1020,7 @@ def run_live(
     require_ohlcv=True,
     as_of=None,
 ):
-    """Run inference using the existing feature and sentiment adapters."""
+    """Run inference with local features, required macros, and sentiment."""
     now = (
         pd.Timestamp.now(tz=TRT)
         if as_of is None
@@ -872,11 +1062,19 @@ def run_live(
         )
 
     if today not in features.index:
-        raise ValueError("Feature builder did not produce T-0 features.")
+        raise ValueError("Feature builder did not produce requested-date features.")
 
     df = features.loc[[today]].copy()
-    sentiment = float(sentiment_provider(ticker, cutoff))
 
+    # Add actual lagged macro features before inference. This uses the same
+    # macro builder as core.ai_analyzer's existing model inference path.
+    df = append_required_macro_features(
+        model,
+        df,
+        as_of=cutoff,
+    )
+
+    sentiment = float(sentiment_provider(ticker, cutoff))
     if not np.isfinite(sentiment) or not -1 <= sentiment <= 1:
         raise ValueError("Invalid news_sentiment; inference aborted.")
 
@@ -921,7 +1119,6 @@ def format_telegram_message(result):
         decision = prediction
 
     probabilities = result.get("probabilities")
-
     if probabilities:
         probability_text = "; ".join(
             f"{compact_text(label, 40)}: {float(value):.2%}"
@@ -973,7 +1170,6 @@ def notification_warning(message):
             .replace("\r", "%0D")
             .replace("\n", "%0A")
         )
-
         print(
             f"::warning title=Telegram notification::{escaped}",
             flush=True,
@@ -986,10 +1182,8 @@ def send_telegram_notification(result):
     chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
     missing = []
-
     if not token:
         missing.append("TELEGRAM_BOT_TOKEN")
-
     if not chat_id:
         missing.append("TELEGRAM_CHAT_ID")
 
@@ -999,7 +1193,6 @@ def send_telegram_notification(result):
             + ", ".join(missing)
             + ". In GitHub Actions, map repository secrets into the step's env."
         )
-
         return {
             "status": "skipped",
             "reason": "missing_credentials",
@@ -1013,7 +1206,6 @@ def send_telegram_notification(result):
             "Telegram message formatting failed "
             f"({type(exc).__name__}); inference completed."
         )
-
         return {
             "status": "failed",
             "reason": "formatting_error",
@@ -1050,7 +1242,6 @@ def send_telegram_notification(result):
                     ),
                     429: "Telegram rate limit reached.",
                 }
-
                 hint = hints.get(
                     status_code,
                     "Telegram returned an unsuccessful HTTP response.",
@@ -1059,7 +1250,6 @@ def send_telegram_notification(result):
                 notification_warning(
                     f"Telegram delivery failed: HTTP {status_code}. {hint}"
                 )
-
                 return {
                     "status": "failed",
                     "reason": "http_error",
@@ -1071,14 +1261,12 @@ def send_telegram_notification(result):
                     "Telegram did not confirm delivery: invalid response "
                     "or API ok=false."
                 )
-
                 return {
                     "status": "failed",
                     "reason": "api_rejected",
                 }
 
             delivered_message = body.get("result")
-
             if (
                 not isinstance(delivered_message, dict)
                 or not isinstance(
@@ -1089,43 +1277,37 @@ def send_telegram_notification(result):
                 notification_warning(
                     "Telegram response did not contain a valid message ID."
                 )
-
                 return {
                     "status": "unknown",
                     "reason": "missing_delivery_receipt",
                 }
 
             message_id = delivered_message["message_id"]
-
             LOG.info(
                 "Telegram delivery confirmed; message_id=%s.",
                 message_id,
             )
-
             return {
                 "status": "sent",
                 "message_id": message_id,
             }
 
     except requests.Timeout:
-        # A timed-out POST may already have been delivered.
         notification_warning(
             "Telegram request timed out; delivery status is unknown. "
             "No automatic retry was made to avoid duplicate notifications."
         )
-
         return {
             "status": "unknown",
             "reason": "timeout",
         }
 
     except requests.RequestException as exc:
-        # Exception text may contain the token-bearing request URL.
+        # Exception text can contain the token-bearing URL.
         notification_warning(
             "Telegram network request failed "
             f"({type(exc).__name__}); delivery was not confirmed."
         )
-
         return {
             "status": "unknown",
             "reason": "network_error",
@@ -1136,7 +1318,6 @@ def send_telegram_notification(result):
             "Telegram notification failed "
             f"({type(exc).__name__}); inference completed."
         )
-
         return {
             "status": "failed",
             "reason": "unexpected_notification_error",
@@ -1212,7 +1393,6 @@ def main():
         as_of=args.as_of,
     )
 
-    # Telegram delivery remains explicitly connected to successful inference.
     result["telegram"] = send_telegram_notification(result)
 
     print(
