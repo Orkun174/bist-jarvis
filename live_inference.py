@@ -1357,7 +1357,7 @@ def main():
     )
     parser.add_argument(
         "--as-of",
-        default="2026-09-25 18:35:00+03:00",
+        default=None,
         help="Override current time for backtesting",
     )
 
