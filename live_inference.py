@@ -773,7 +773,7 @@ def main():
     )
     parser.add_argument(
         "--history",
-        default="work/backfill/THYAO/coverage.csv",
+        default="work/backfill/THYAO/THYAO.csv",
         help="Daily CSV with a Date column",
     )
     parser.add_argument(
