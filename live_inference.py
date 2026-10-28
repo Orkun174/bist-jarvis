@@ -59,7 +59,6 @@ import importlib
 import json
 import logging
 import os
-from datetime import time
 from importlib.metadata import version
 from pathlib import Path
 
@@ -1038,11 +1037,8 @@ def run_live(
 
     now = now.tz_convert(TRT)
 
-    if now.time() < time(18, 30):
-        raise ValueError("Run at or after 18:30 TRT.")
-
     symbol = ticker.upper().removesuffix(".IS")
-    cutoff = now.normalize() + pd.Timedelta(hours=18, minutes=30)
+    cutoff = now
     today = pd.Timestamp(now.date())
 
     history = normalize_daily(history)
