@@ -920,7 +920,7 @@ def append_required_macro_features(model, df, as_of):
 
 
 def align_and_predict(model, df):
-    """Align features to the deployed XGBoost schema."""
+    """Align features to the deployed schema and impute missing values."""
     names = model.get_booster().feature_names
 
     if not names or len(set(names)) != len(names):
@@ -937,14 +937,20 @@ def align_and_predict(model, df):
             f"Required model features are missing: {sorted(missing)}"
         )
 
-    if not np.isfinite(
-        df.loc[:, names].to_numpy(dtype=float)
-    ).all():
+    # Match the model's feature order and discard extra columns.
+    df = df.reindex(columns=names)
+
+    # Treat infinite values as missing before sequential imputation.
+    df = df.replace([np.inf, -np.inf], np.nan)
+    if df.isna().any().any():
+        df = df.ffill().bfill().fillna(0.0)
+
+    # Validate the final matrix before prediction.
+    if not np.isfinite(df.to_numpy(dtype=float)).all():
         raise ValueError(
             "Required model features contain NaN or infinity."
         )
 
-    df = df.reindex(columns=model.get_booster().feature_names)
     return model.predict(df)
 
 
