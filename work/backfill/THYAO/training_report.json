@@ -1,0 +1,54 @@
+{
+  "ticker": "THYAO",
+  "training_rows": 750,
+  "trained_from": "2023-09-25",
+  "trained_through": "2026-09-17",
+  "feature_names": [
+    "EMA20_Distance",
+    "EMA50_Distance",
+    "Volume_Surge",
+    "RSI_Momentum_5D",
+    "Relative_Return_1D",
+    "MACD_Normalized",
+    "ATR_Normalized",
+    "ADX_14",
+    "CMF_20",
+    "StochRSI_K",
+    "macro_USDTRY_5d_mean_lag",
+    "macro_BRENT_5d_mean_lag",
+    "macro_GOLD_1d_lag",
+    "macro_GOLD_5d_mean_lag",
+    "macro_SP500_5d_mean_lag",
+    "macro_BIST100_5d_mean_lag",
+    "macro_BISTBANK_1d_lag",
+    "macro_BISTBANK_5d_mean_lag",
+    "news_sentiment"
+  ],
+  "missing_original_features": [
+    "macro_BIST100_5d_mean_lag",
+    "macro_BISTBANK_1d_lag",
+    "macro_BISTBANK_5d_mean_lag",
+    "macro_BRENT_5d_mean_lag",
+    "macro_GOLD_1d_lag",
+    "macro_GOLD_5d_mean_lag",
+    "macro_SP500_5d_mean_lag",
+    "macro_USDTRY_5d_mean_lag"
+  ],
+  "all_missing_features": [
+    "macro_USDTRY_5d_mean_lag",
+    "macro_BRENT_5d_mean_lag",
+    "macro_GOLD_1d_lag",
+    "macro_GOLD_5d_mean_lag",
+    "macro_SP500_5d_mean_lag",
+    "macro_BIST100_5d_mean_lag",
+    "macro_BISTBANK_1d_lag",
+    "macro_BISTBANK_5d_mean_lag"
+  ],
+  "sentiment_distinct_values": 180,
+  "sentiment_model": "savasy/bert-base-turkish-sentiment-cased",
+  "sentiment_labels": {
+    "negative": -1.0,
+    "positive": 1.0
+  },
+  "holdout_score": 0.5666666666666667
+}
