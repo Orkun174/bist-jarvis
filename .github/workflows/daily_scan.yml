@@ -53,12 +53,21 @@ jobs:
             vectorbt \
             xgboost \
             yfinance \
+            "isyatirimhisse>=5.0.0" \
+            "exchange-calendars==4.13.2" \
             requests \
             streamlit \
             shap \
             scikit-learn \
             feedparser \
+            beautifulsoup4 \
+            "transformers>=4.48,<5" \
+            huggingface_hub \
             tzdata
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Test completed-session selection
+        run: python -m unittest test_live_sessions -v
 
       - name: Verify required project files
         run: |

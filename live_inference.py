@@ -4,6 +4,7 @@ live_inference.py
 Dependencies:
     pip install pandas numpy requests yfinance xgboost truststore tzdata
     pip install "isyatirimhisse>=5.0.0"
+    pip install "exchange-calendars==4.13.2"
     pip install torch transformers huggingface_hub feedparser beautifulsoup4
 
 Optional local .env support:
@@ -33,6 +34,7 @@ Supported date columns:
     Date, date, datetime, timestamp, Seans Tarihi
 
 Price retrieval:
+    Select the last completed XIST session, including holidays and early closes.
     1. Is Yatirim closing price.
     2. Yahoo minute OHLCV.
     3. Exact-date Yahoo daily OHLCV if minute retrieval or validation fails.
@@ -78,6 +80,46 @@ DEFAULT_SENTIMENT_LABELS = {
 
 _SENTIMENT_MODEL = DEFAULT_SENTIMENT_MODEL
 _SENTIMENT_LABELS = dict(DEFAULT_SENTIMENT_LABELS)
+
+
+class PriceDataUnavailable(RuntimeError):
+    """The selected completed session has no validated price data."""
+
+
+def last_completed_bist_session(as_of):
+    """Return the last completed BIST session date and its final close in TRT.
+
+    exchange-calendars 4.13.2 models XIST's continuous-trading closes at
+    18:00 on full days and 12:30 on early-close days. Include the ten-minute
+    closing phase, so the complete stock session ends at 18:10 or 12:40.
+    These are market boundaries, not restrictions on when this script runs.
+    """
+    import exchange_calendars as xcals
+
+    now = pd.Timestamp(as_of)
+    if pd.isna(now) or now.tzinfo is None:
+        raise ValueError("Session selection requires a timezone-aware as_of.")
+    now = now.tz_convert(TRT)
+    day = now.tz_localize(None).normalize()
+    calendar = xcals.get_calendar(
+        "XIST",
+        start=(day - pd.Timedelta(days=370)).date().isoformat(),
+        end=day.date().isoformat(),
+    )
+    closes = calendar.closes + pd.Timedelta(minutes=10)
+    completed = closes.loc[closes <= now.tz_convert("UTC")]
+    if completed.empty:
+        raise RuntimeError(f"No completed XIST session found before {now}.")
+
+    session_day = pd.Timestamp(completed.index[-1]).tz_localize(None).normalize()
+    session_close = pd.Timestamp(completed.iloc[-1]).tz_convert(TRT)
+    LOG.info(
+        "Requested as_of=%s; selected completed XIST session=%s, close=%s.",
+        now.isoformat(),
+        session_day.date(),
+        session_close.isoformat(),
+    )
+    return session_day, session_close
 
 
 def resolve(spec):
@@ -465,8 +507,8 @@ def is_close(symbol, day):
     return close
 
 
-def minute_bar(ticker, day):
-    """Build a timestamped proxy from minutes strictly before 18:10 TRT."""
+def minute_bar(ticker, day, session_close=None):
+    """Build a proxy through the completed session's actual closing phase."""
     import yfinance as yf
 
     start = pd.Timestamp(day, tz=TRT)
@@ -492,7 +534,18 @@ def minute_bar(ticker, day):
         )
 
     raw.index = raw.index.tz_convert(TRT)
-    cutoff = start + pd.Timedelta(hours=18, minutes=10)
+    if session_close is None:
+        selected_day, session_close = last_completed_bist_session(
+            start + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
+        )
+        if selected_day.date() != day:
+            raise ValueError("Requested minute date is not a BIST session.")
+    cutoff = pd.Timestamp(session_close)
+    if pd.isna(cutoff) or cutoff.tzinfo is None:
+        raise ValueError("Minute cutoff must be timezone-aware.")
+    cutoff = cutoff.tz_convert(TRT)
+    if cutoff.date() != start.date():
+        raise ValueError("Minute cutoff does not match the requested session.")
 
     raw = raw.loc[
         (raw.index >= start + pd.Timedelta(hours=9, minutes=55))
@@ -516,7 +569,7 @@ def minute_bar(ticker, day):
         raise ValueError("Invalid minute price or volume.")
 
     if cutoff - raw.index[-1] > pd.Timedelta(minutes=10):
-        raise ValueError("Last minute is too old for the 18:10 cutoff.")
+        raise ValueError("Last minute is too old for the selected session close.")
 
     if raw.index[0] > start + pd.Timedelta(hours=10, minutes=5):
         raise ValueError("Minute history misses the session opening.")
@@ -596,7 +649,7 @@ def daily_bar(ticker, day):
     return bar
 
 
-def fetch_t0(ticker, as_of, require_ohlcv=True):
+def fetch_t0(ticker, as_of, require_ohlcv=True, session_close=None):
     """Retrieve the requested bar using primary, minute, and daily sources."""
     symbol = ticker.upper().removesuffix(".IS")
     yahoo_ticker = symbol + ".IS"
@@ -634,7 +687,9 @@ def fetch_t0(ticker, as_of, require_ohlcv=True):
         }
 
     try:
-        proxy, minute_time = minute_bar(yahoo_ticker, day)
+        proxy, minute_time = minute_bar(
+            yahoo_ticker, day, session_close=session_close
+        )
         bar = dict(proxy)
 
         if close is not None:
@@ -697,7 +752,7 @@ def fetch_t0(ticker, as_of, require_ohlcv=True):
             exc,
         )
 
-        raise RuntimeError(
+        raise PriceDataUnavailable(
             f"No valid OHLCV bar for {symbol} on {day}. "
             f"Is Yatirim: {primary_error or 'close available, full OHLCV required'}. "
             f"Yahoo minute: {minute_error}. "
@@ -1032,26 +1087,50 @@ def run_live(
         else pd.Timestamp(as_of)
     )
 
-    if now.tzinfo is None:
+    if pd.isna(now) or now.tzinfo is None:
         raise ValueError("as_of must be timezone-aware.")
 
     now = now.tz_convert(TRT)
 
     symbol = ticker.upper().removesuffix(".IS")
-    cutoff = now
-    today = pd.Timestamp(now.date())
+    session_day, cutoff = last_completed_bist_session(now)
 
     history = normalize_daily(history)
-    history = history.loc[history.index < today]
+    history = history.loc[history.index < session_day]
 
     if history.empty:
         raise ValueError("Historical warm-up bars are required.")
 
-    bar, provenance = fetch_t0(
-        symbol,
-        cutoff,
-        require_ohlcv=require_ohlcv,
-    )
+    try:
+        bar, provenance = fetch_t0(
+            symbol,
+            cutoff,
+            require_ohlcv=require_ohlcv,
+            session_close=cutoff,
+        )
+    except PriceDataUnavailable as exc:
+        LOG.warning(
+            "Inference skipped for %s, session %s: %s",
+            symbol, session_day.date(), exc,
+        )
+        return {
+            "status": "skipped",
+            "reason": "price_data_unavailable",
+            "ticker": symbol,
+            "date": str(session_day.date()),
+            "as_of": now.isoformat(),
+            "session_close": cutoff.isoformat(),
+            "timestamp": pd.Timestamp.now(tz=TRT).isoformat(),
+            "news_cutoff": cutoff.isoformat(),
+            "prediction": None,
+            "details": str(exc),
+        }
+    provenance.update({
+        "calendar": "XIST",
+        "requested_as_of": now.isoformat(),
+        "session_close": cutoff.isoformat(),
+        "used_previous_session": session_day.date() != now.date(),
+    })
     bars = pd.concat([history, bar]).sort_index()
     features = feature_builder(bars.copy())
 
@@ -1063,10 +1142,10 @@ def run_live(
             "Feature builder must return a uniquely indexed DataFrame."
         )
 
-    if today not in features.index:
+    if session_day not in features.index:
         raise ValueError("Feature builder did not produce requested-date features.")
 
-    df = features.loc[[today]].copy()
+    df = features.loc[[session_day]].copy()
 
     # Add actual lagged macro features before inference. This uses the same
     # macro builder as core.ai_analyzer's existing model inference path.
@@ -1084,8 +1163,11 @@ def run_live(
     prediction = align_and_predict(model, df)
 
     return {
+        "status": "ok",
         "ticker": symbol,
-        "date": str(today.date()),
+        "date": str(session_day.date()),
+        "as_of": now.isoformat(),
+        "session_close": cutoff.isoformat(),
         "prediction": np.asarray(prediction).tolist(),
         "probabilities": prediction_probabilities(model, df),
         "holdout_score": read_holdout_score(model),
@@ -1111,6 +1193,20 @@ def compact_text(value, limit=250):
 
 def format_telegram_message(result):
     """Format predictions without inventing BUY/SELL class meanings."""
+    if result.get("status") == "skipped":
+        return "\n".join([
+            "BIST CRISIS JARVIS",
+            "",
+            "Status: SKIPPED — fiyat verisi yok; tahmin üretilmedi.",
+            f"Ticker: {compact_text(result.get('ticker'), 50)}",
+            f"Selected trading date: {compact_text(result.get('date'), 30)}",
+            f"Requested as-of (TRT): {compact_text(result.get('as_of'), 80)}",
+            f"Session close (TRT): {compact_text(result.get('session_close'), 80)}",
+            f"Reason: {compact_text(result.get('reason'), 100)}",
+            f"Details: {compact_text(result.get('details'), 600)}",
+            f"Timestamp (TRT): {compact_text(result.get('timestamp'), 80)}",
+        ])[:1900]
+
     prediction = result.get("prediction")
 
     if isinstance(prediction, list) and len(prediction) == 1:
@@ -1154,6 +1250,8 @@ def format_telegram_message(result):
         f"Holdout score: {holdout_text}",
         f"News sentiment: {sentiment_text}",
         f"Trading date: {compact_text(result.get('date'), 30)}",
+        f"Requested as-of (TRT): {compact_text(result.get('as_of'), 80)}",
+        f"Session close (TRT): {compact_text(result.get('session_close'), 80)}",
         f"Timestamp (TRT): {compact_text(result.get('timestamp'), 80)}",
         f"News cutoff (TRT): {compact_text(result.get('news_cutoff'), 80)}",
         f"Close source: {compact_text(provenance.get('close_source'), 100)}",
