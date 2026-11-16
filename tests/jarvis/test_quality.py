@@ -120,3 +120,50 @@ def test_reference_outage_does_not_quarantine(tmp_path):
     assert report["quarantined"] == {}
     assert report["cross_check_unavailable"] == ["AAA", "BBB"]
     assert report["training_allowed"] is True
+
+
+# -- Is Yatirim reference closes ------------------------------------------
+
+from jarvis.quality import isyatirim_closes  # noqa: E402
+
+
+def test_reference_skips_everything_when_probe_finds_nothing():
+    asked = []
+
+    def fetch_one(ticker, session):
+        asked.append(ticker)
+        return None
+
+    tickers = [f"T{i:03d}" for i in range(100)]
+    assert isyatirim_closes(tickers, SESSION, fetch_one=fetch_one) == {}
+    assert len(asked) == 3  # only the probe, not all 100
+
+
+def test_reference_fetches_all_when_probe_succeeds():
+    def fetch_one(ticker, session):
+        return None if ticker == "T007" else 100.0
+
+    tickers = [f"T{i:03d}" for i in range(40)]
+    closes = isyatirim_closes(tickers, SESSION, fetch_one=fetch_one)
+    assert len(closes) == 39
+    assert "T007" not in closes
+    assert closes["T000"] == 100.0
+
+
+def test_reference_survives_fetch_errors():
+    def fetch_one(ticker, session):
+        if ticker == "T001":
+            raise OSError("timeout")
+        return 100.0
+
+    closes = isyatirim_closes(["T000", "T001", "T002", "T003"], SESSION, fetch_one=fetch_one)
+    assert sorted(closes) == ["T000", "T002", "T003"]
+
+
+def test_reference_stops_at_deadline():
+    def fetch_one(ticker, session):
+        return 100.0
+
+    tickers = [f"T{i:03d}" for i in range(50)]
+    closes = isyatirim_closes(tickers, SESSION, fetch_one=fetch_one, budget_seconds=0.0)
+    assert len(closes) < 50

@@ -87,12 +87,15 @@ def run(
         tickers = tickers[:limit]
     store = Store(data_dir)
 
+    LOG.info("Seans %s: %d hisse için fiyatlar güncelleniyor.", session.date(), len(tickers))
     statuses = update_prices(store, tickers, session, download=download)
+    LOG.info("Fiyatlar tamam; veri kontrolü ve kapanış karşılaştırması başlıyor.")
     report = build_report(
         store, tickers, session, statuses, sessions_until(session, QUALITY_WINDOW),
         reference=reference,
     )
 
+    LOG.info("Veri kontrolü tamam; dışlama listeleri alınıyor.")
     fresh, source_status = exclusions(tickers, session)
     automatic = _automatic_exclusions(store, session, fresh, source_status)
     manual = load_exclusions(exclusions_path)

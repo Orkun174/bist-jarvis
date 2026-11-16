@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
-import contextlib
-import io
 import logging
 import math
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
 import pandas as pd
+import requests
 
 from jarvis.config import (
     CROSS_CHECK_TOLERANCE, MAX_QUARANTINE_RATIO, QUALITY_WINDOW, SUSPECT_JUMP,
 )
+from jarvis.http import USER_AGENT
 from jarvis.store import Store
 
 LOG = logging.getLogger("jarvis.quality")
@@ -51,23 +53,70 @@ def cross_check(yahoo_close: float, reference_close: float | None) -> str:
     return "mismatch" if difference > CROSS_CHECK_TOLERANCE else "ok"
 
 
-def isyatirim_closes(tickers: list[str], session: pd.Timestamp) -> dict[str, float]:
-    """Unadjusted closes for `session` from Is Yatirim; empty when unavailable."""
-    try:
-        from isyatirimhisse import fetch_stock_data
+ISYATIRIM_URL = (
+    "https://www.isyatirim.com.tr/_layouts/15/Isyatirim.Website/Common/Data.aspx/HisseTekil"
+)
+REFERENCE_PROBE = 3        # tickers asked first to see whether the session is published
+REFERENCE_WORKERS = 16
+REFERENCE_BUDGET_SECONDS = 600.0
 
-        day = pd.Timestamp(session).strftime("%d-%m-%Y")
-        with contextlib.redirect_stdout(io.StringIO()):  # the library prints per symbol
-            raw = fetch_stock_data(symbols=list(tickers), start_date=day, end_date=day)
-        dates = pd.to_datetime(raw["HGDG_TARIH"]).dt.normalize()
-        rows = raw[dates == pd.Timestamp(session).normalize()]
-        return {
-            str(code): float(close)
-            for code, close in zip(rows["HGDG_HS_KODU"], rows["HGDG_KAPANIS"])
-        }
-    except Exception as error:  # the library raises ValueError when nothing is published
-        LOG.warning("İş Yatırım kapanışları alınamadı: %s", error)
+
+def isyatirim_close(ticker: str, session: pd.Timestamp) -> float | None:
+    """One ticker's unadjusted close for `session`, or None when not published."""
+    day = pd.Timestamp(session).strftime("%d-%m-%Y")
+    response = requests.get(
+        ISYATIRIM_URL,
+        params={"hisse": ticker, "startdate": day, "enddate": day},
+        headers={"User-Agent": USER_AGENT},
+        timeout=10,
+    )
+    response.raise_for_status()
+    for row in response.json().get("value", []):
+        if row.get("HGDG_TARIH") == day and row.get("HGDG_KAPANIS") is not None:
+            return float(row["HGDG_KAPANIS"])
+    return None
+
+
+def isyatirim_closes(
+    tickers: list[str],
+    session: pd.Timestamp,
+    fetch_one: Callable[[str, pd.Timestamp], float | None] = isyatirim_close,
+    budget_seconds: float = REFERENCE_BUDGET_SECONDS,
+) -> dict[str, float]:
+    """Unadjusted closes for `session` from Is Yatirim; empty when unavailable.
+
+    A few tickers are probed first: when none has the session yet (the source
+    publishes late in the evening) the rest are not requested at all.
+    """
+    deadline = time.monotonic() + budget_seconds
+
+    def safe(ticker: str) -> float | None:
+        try:
+            return fetch_one(ticker, session)
+        except Exception as error:
+            LOG.debug("İş Yatırım %s alınamadı: %s", ticker, error)
+            return None
+
+    closes: dict[str, float] = {}
+    probe, rest = tickers[:REFERENCE_PROBE], tickers[REFERENCE_PROBE:]
+    for ticker in probe:
+        value = safe(ticker)
+        if value is not None:
+            closes[ticker] = value
+    if not closes:
+        LOG.warning("İş Yatırım %s seansını henüz yayınlamamış; karşılaştırma atlandı.",
+                    pd.Timestamp(session).date())
         return {}
+
+    def bounded(ticker: str) -> float | None:
+        return None if time.monotonic() >= deadline else safe(ticker)
+
+    with ThreadPoolExecutor(max_workers=REFERENCE_WORKERS) as pool:
+        for ticker, value in zip(rest, pool.map(bounded, rest)):
+            if value is not None:
+                closes[ticker] = value
+    LOG.info("İş Yatırım: %d / %d kapanış alındı.", len(closes), len(tickers))
+    return closes
 
 
 def build_report(
