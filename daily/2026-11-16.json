@@ -1,5 +1,5 @@
 {
-  "eligible": 150,
+  "eligible": 89,
   "model": {
     "checks": {
       "data": {
@@ -8,16 +8,16 @@
       },
       "drift": {
         "ok": true,
-        "reason": "no_previous_model"
+        "rank_corr": 0.8955085398685959
       },
       "health": {
         "days": 120,
-        "mean_rank_ic": 0.10583337647941653,
+        "mean_rank_ic": 0.08404676953464947,
         "ok": true
       },
       "rows": {
         "ok": true,
-        "train_rows": 187855
+        "train_rows": 126481
       }
     },
     "model_id": "2026-11-16-001bde800d",
@@ -25,7 +25,33 @@
     "retrained": true,
     "weights_changed": true
   },
-  "recommendations": [],
+  "recommendations": [
+    {
+      "prob": 0.4899,
+      "rank": 1,
+      "ticker": "ARCLK"
+    },
+    {
+      "prob": 0.4832,
+      "rank": 2,
+      "ticker": "TSPOR"
+    },
+    {
+      "prob": 0.483,
+      "rank": 3,
+      "ticker": "DOCO"
+    },
+    {
+      "prob": 0.4825,
+      "rank": 4,
+      "ticker": "RGYAS"
+    },
+    {
+      "prob": 0.4821,
+      "rank": 5,
+      "ticker": "FROTO"
+    }
+  ],
   "scorecard_live": {
     "days": 0,
     "hit_rate": null,
@@ -34,57 +60,56 @@
     "recommendations": 0
   },
   "session": "2026-11-16",
-  "threshold": 0.65,
   "top": [
     {
-      "prob": 0.4975,
+      "prob": 0.4899,
       "rank": 1,
-      "ticker": "TSKB"
+      "ticker": "ARCLK"
     },
     {
-      "prob": 0.4895,
+      "prob": 0.4832,
       "rank": 2,
-      "ticker": "THYAO"
+      "ticker": "TSPOR"
     },
     {
-      "prob": 0.4883,
+      "prob": 0.483,
       "rank": 3,
-      "ticker": "AGESA"
-    },
-    {
-      "prob": 0.486,
-      "rank": 4,
       "ticker": "DOCO"
     },
     {
-      "prob": 0.4848,
+      "prob": 0.4825,
+      "rank": 4,
+      "ticker": "RGYAS"
+    },
+    {
+      "prob": 0.4821,
       "rank": 5,
-      "ticker": "TAVHL"
+      "ticker": "FROTO"
     },
     {
-      "prob": 0.4825,
+      "prob": 0.4803,
       "rank": 6,
-      "ticker": "GARAN"
+      "ticker": "SISE"
     },
     {
-      "prob": 0.4825,
+      "prob": 0.4801,
       "rank": 7,
-      "ticker": "PGSUS"
+      "ticker": "AEFES"
     },
     {
-      "prob": 0.4816,
+      "prob": 0.4799,
       "rank": 8,
-      "ticker": "MPARK"
+      "ticker": "ISCTR"
     },
     {
       "prob": 0.4798,
       "rank": 9,
-      "ticker": "AKBNK"
+      "ticker": "KCHOL"
     },
     {
-      "prob": 0.479,
+      "prob": 0.4798,
       "rank": 10,
-      "ticker": "ENERY"
+      "ticker": "MGROS"
     }
   ]
 }
