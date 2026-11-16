@@ -66,6 +66,7 @@ def _clean(frame: pd.DataFrame, session: pd.Timestamp) -> pd.DataFrame:
     if frame is None or frame.empty or not set(OHLCV).issubset(frame.columns):
         return pd.DataFrame(columns=OHLCV)
     frame = frame[OHLCV].copy()
+    frame.columns.name = None
     index = pd.DatetimeIndex(frame.index)
     if index.tz is not None:
         index = index.tz_localize(None)
