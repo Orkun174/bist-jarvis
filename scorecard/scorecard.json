@@ -1,0 +1,45 @@
+{
+  "as_of": "2026-11-16",
+  "calibration": [
+    {
+      "bucket": "0.50-0.55",
+      "count": 0,
+      "hit_rate": null
+    },
+    {
+      "bucket": "0.55-0.60",
+      "count": 0,
+      "hit_rate": null
+    },
+    {
+      "bucket": "0.60+",
+      "count": 0,
+      "hit_rate": null
+    }
+  ],
+  "kind": "live",
+  "pending": 0,
+  "windows": {
+    "20": {
+      "days": 0,
+      "hit_rate": null,
+      "mean_excess": null,
+      "mean_rank_ic": null,
+      "recommendations": 0
+    },
+    "60": {
+      "days": 0,
+      "hit_rate": null,
+      "mean_excess": null,
+      "mean_rank_ic": null,
+      "recommendations": 0
+    },
+    "all": {
+      "days": 0,
+      "hit_rate": null,
+      "mean_excess": null,
+      "mean_rank_ic": null,
+      "recommendations": 0
+    }
+  }
+}
