@@ -40,9 +40,10 @@ def test_new_ticker_requests_five_years(tmp_path):
 def test_existing_ticker_requests_only_missing_days(tmp_path):
     store = Store(tmp_path)
     store.write_prices("THYAO", bars(["2026-11-10", "2026-11-11"]))
-    recorder = Recorder({"THYAO.IS": bars(["2026-11-12", "2026-11-13"])})
+    recorder = Recorder({"THYAO.IS": bars(["2026-11-11", "2026-11-12", "2026-11-13"])})
     update_prices(store, ["THYAO"], SESSION, download=recorder)
-    assert requested(recorder, "THYAO.IS") == [(pd.Timestamp("2026-11-12"), SESSION)]
+    # The last stored bar is requested again so a changed adjustment basis is visible.
+    assert requested(recorder, "THYAO.IS") == [(pd.Timestamp("2026-11-11"), SESSION)]
     assert len(store.read_prices("THYAO")) == 4
 
 
@@ -84,3 +85,37 @@ def test_rows_after_session_are_dropped(tmp_path):
     recorder = Recorder({"THYAO.IS": bars(["2026-11-13", "2026-11-16"])})
     update_prices(store, ["THYAO"], SESSION, download=recorder)
     assert list(store.read_prices("THYAO").index) == [SESSION]
+
+
+def test_adjustment_change_triggers_full_refresh(tmp_path):
+    """After a split Yahoo rescales all history; appending would mix two price bases."""
+    store = Store(tmp_path)
+    store.write_prices("THYAO", bars(["2020-01-02", "2026-11-11", "2026-11-12"], close=10.0))
+    rebased = bars(["2026-11-11", "2026-11-12", "2026-11-13"], close=5.0)
+    recorder = Recorder({"THYAO.IS": rebased})
+    statuses = update_prices(store, ["THYAO"], SESSION, download=recorder)
+    assert requested(recorder, "THYAO.IS") == [
+        (pd.Timestamp("2026-11-12"), SESSION),
+        (pd.Timestamp("2021-11-13"), SESSION),
+    ]
+    stored = store.read_prices("THYAO")
+    assert statuses == {"THYAO": "updated"}
+    assert (stored["Close"] == 5.0).all()
+    assert pd.Timestamp("2020-01-02") not in stored.index  # old-basis rows are gone
+
+
+def test_small_adjustment_difference_is_not_a_refresh(tmp_path):
+    store = Store(tmp_path)
+    store.write_prices("THYAO", bars(["2026-11-11", "2026-11-12"], close=10.0))
+    recorder = Recorder({"THYAO.IS": bars(["2026-11-12", "2026-11-13"], close=10.0005)})
+    update_prices(store, ["THYAO"], SESSION, download=recorder)
+    assert len(requested(recorder, "THYAO.IS")) == 1
+
+
+def test_only_the_overlap_bar_returned_is_fetch_failed(tmp_path):
+    """The ticker did not trade on the session: nothing new arrived."""
+    store = Store(tmp_path)
+    store.write_prices("THYAO", bars(["2026-11-11", "2026-11-12"]))
+    recorder = Recorder({"THYAO.IS": bars(["2026-11-12"])})
+    statuses = update_prices(store, ["THYAO"], SESSION, download=recorder)
+    assert statuses == {"THYAO": "fetch_failed"}

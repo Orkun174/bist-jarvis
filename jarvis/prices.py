@@ -13,6 +13,8 @@ from jarvis.store import Store
 
 LOG = logging.getLogger("jarvis.prices")
 BATCH_SIZE = 50
+# Relative close difference on the overlap bar that signals a new adjustment basis.
+ADJUSTMENT_TOLERANCE = 0.001
 
 Downloader = Callable[[list[str], pd.Timestamp, pd.Timestamp], dict[str, pd.DataFrame]]
 
@@ -75,6 +77,14 @@ def _clean(frame: pd.DataFrame, session: pd.Timestamp) -> pd.DataFrame:
     return frame[frame.index <= session]
 
 
+def _download_group(download: Downloader, tickers: list[str], start, session) -> dict:
+    try:
+        return download([yahoo_symbol(t) for t in tickers], pd.Timestamp(start), session)
+    except Exception as error:
+        LOG.warning("İndirme başarısız (%d hisse): %s", len(tickers), error)
+        return {}
+
+
 def update_prices(
     store: Store,
     tickers: list[str],
@@ -84,33 +94,57 @@ def update_prices(
     """Bring every ticker's stored history up to `session`.
 
     Returns a status per ticker: "updated", "current" or "fetch_failed".
+
+    Yahoo's adjusted prices are rescaled retroactively after a split or
+    dividend. The last stored bar is therefore requested again: when its close
+    no longer matches, the whole history is downloaded afresh instead of
+    appending bars on a different price basis.
     """
     session = pd.Timestamp(session).normalize()
+    full_start = pd.Timestamp(session - pd.DateOffset(years=HISTORY_YEARS))
     statuses: dict[str, str] = {}
+    last_bars: dict[str, tuple[pd.Timestamp, float]] = {}
     requests: dict[pd.Timestamp, list[str]] = {}
     for ticker in tickers:
         existing = store.read_prices(ticker)
         if existing.empty:
-            start = session - pd.DateOffset(years=HISTORY_YEARS)
+            start = full_start
         elif existing.index[-1] >= session:
             statuses[ticker] = "current"
             continue
         else:
-            start = existing.index[-1] + pd.Timedelta(days=1)
+            start = existing.index[-1]
+            last_bars[ticker] = (start, float(existing["Close"].iloc[-1]))
         requests.setdefault(pd.Timestamp(start), []).append(ticker)
 
+    rebased: list[str] = []
     for start, group in requests.items():
-        try:
-            frames = download([yahoo_symbol(t) for t in group], start, session)
-        except Exception as error:
-            LOG.warning("İndirme başarısız (%d hisse): %s", len(group), error)
-            frames = {}
+        frames = _download_group(download, group, start, session)
         for ticker in group:
             cleaned = _clean(frames.get(yahoo_symbol(ticker)), session)
+            if ticker in last_bars:
+                last_day, last_close = last_bars[ticker]
+                if last_day in cleaned.index:
+                    fresh_close = float(cleaned.loc[last_day, "Close"])
+                    if abs(fresh_close / last_close - 1.0) > ADJUSTMENT_TOLERANCE:
+                        rebased.append(ticker)
+                        continue
+                cleaned = cleaned[cleaned.index > last_day]
             if cleaned.empty:
                 statuses[ticker] = "fetch_failed"
                 continue
             store.write_prices(ticker, cleaned)
+            statuses[ticker] = "updated"
+
+    if rebased:
+        LOG.info("Düzeltme katsayısı değişmiş, geçmiş yeniden indiriliyor: %s", ", ".join(rebased))
+        frames = _download_group(download, rebased, full_start, session)
+        for ticker in rebased:
+            cleaned = _clean(frames.get(yahoo_symbol(ticker)), session)
+            if cleaned.empty or cleaned.index[-1] <= last_bars[ticker][0]:
+                statuses[ticker] = "fetch_failed"
+                continue
+            store.write_prices(ticker, cleaned, replace=True)
             statuses[ticker] = "updated"
 
     return {ticker: statuses[ticker] for ticker in tickers}

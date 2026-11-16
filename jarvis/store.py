@@ -33,12 +33,15 @@ class Store:
         frame.index = pd.DatetimeIndex(frame.index)
         return frame[OHLCV]
 
-    def write_prices(self, ticker: str, frame: pd.DataFrame) -> bool:
-        """Merge `frame` into the stored history; new rows win on equal dates."""
+    def write_prices(self, ticker: str, frame: pd.DataFrame, replace: bool = False) -> bool:
+        """Merge `frame` into the stored history; new rows win on equal dates.
+
+        With `replace=True` the stored history is discarded and only `frame` is kept.
+        """
         incoming = frame[OHLCV].astype(float)
         incoming.index = pd.DatetimeIndex(incoming.index).tz_localize(None).normalize()
         existing = self.read_prices(ticker)
-        merged = incoming if existing.empty else pd.concat([existing, incoming])
+        merged = incoming if existing.empty or replace else pd.concat([existing, incoming])
         merged = merged[~merged.index.duplicated(keep="last")].sort_index()
         merged.index.name = "Date"
         if not existing.empty and merged.equals(existing.rename_axis("Date")):

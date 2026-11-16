@@ -67,3 +67,12 @@ def test_write_json_roundtrip_keeps_turkish(tmp_path):
 def test_write_json_rejects_nan(tmp_path):
     with pytest.raises(ValueError):
         Store(tmp_path).write_json("quality/x", {"ratio": float("nan")})
+
+
+def test_replace_discards_rows_missing_from_new_frame(tmp_path):
+    store = Store(tmp_path)
+    store.write_prices("THYAO", frame(["2026-11-11", "2026-11-12"], [1.0, 2.0]))
+    assert store.write_prices("THYAO", frame(["2026-11-12", "2026-11-13"], [5.0, 6.0]), replace=True) is True
+    result = store.read_prices("THYAO")
+    assert list(result.index) == list(pd.to_datetime(["2026-11-12", "2026-11-13"]))
+    assert list(result["Close"]) == [5.0, 6.0]
