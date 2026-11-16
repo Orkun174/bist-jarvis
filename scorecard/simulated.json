@@ -1,0 +1,53 @@
+{
+  "as_of": "2026-11-16",
+  "calibration": [
+    {
+      "bucket": "0.50-0.55",
+      "count": 9710,
+      "hit_rate": 0.4813594232749743
+    },
+    {
+      "bucket": "0.55-0.60",
+      "count": 1613,
+      "hit_rate": 0.4848109113453193
+    },
+    {
+      "bucket": "0.60+",
+      "count": 245,
+      "hit_rate": 0.5265306122448979
+    }
+  ],
+  "kind": "simulated",
+  "note": "Geçmişe dönük ileriye yürütme; gerçek işlem sonucu değildir.",
+  "pending": 764,
+  "recipe_id": "001bde800d",
+  "top5_net_of_cost": {
+    "days": 245,
+    "hit_rate": 0.49387755102040815,
+    "mean_rank_ic": 0.10026559184136344,
+    "mean_top_excess": 0.0026200928131406473
+  },
+  "windows": {
+    "20": {
+      "days": 15,
+      "hit_rate": null,
+      "mean_excess": null,
+      "mean_rank_ic": 0.026523936210841478,
+      "recommendations": 0
+    },
+    "60": {
+      "days": 55,
+      "hit_rate": 0.5092592592592593,
+      "mean_excess": -0.005680158224672404,
+      "mean_rank_ic": 0.1325404758374985,
+      "recommendations": 108
+    },
+    "all": {
+      "days": 245,
+      "hit_rate": 0.509090909090909,
+      "mean_excess": -0.002112435723802347,
+      "mean_rank_ic": 0.10026559184136344,
+      "recommendations": 440
+    }
+  }
+}
