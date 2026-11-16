@@ -1,6 +1,7 @@
 # .github/workflows/daily_data.yml
-# Updates prices, quality report and eligibility for the whole BIST and
-# commits the result to the `data` branch.
+# Weekdays: update prices/quality/eligibility for the whole BIST, retrain the
+# model, record predictions. Saturdays: weekly recipe search.
+# Everything is committed to the `data` branch.
 name: Daily BIST Data
 
 on:
@@ -8,10 +9,17 @@ on:
     # 19:30 UTC = 22:30 TRT, weekdays. Late enough for Is Yatirim to have
     # published the session close used by the cross-check.
     - cron: "30 19 * * 1-5"
+    # 07:00 UTC = 10:00 TRT, Saturdays: recipe search.
+    - cron: "0 7 * * 6"
   workflow_dispatch:
     inputs:
+      mode:
+        description: "daily = data + training, simulate = walk-forward scorecard, search = recipe search"
+        type: choice
+        options: [daily, simulate, search]
+        default: daily
       limit:
-        description: "Only process the first N symbols (leave empty for all)"
+        description: "daily only: process the first N symbols (leave empty for all)"
         required: false
         default: ""
 
@@ -36,6 +44,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Decide what to run
+        id: mode
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          if [ -z "$MODE" ]; then
+            if [ "${{ github.event.schedule }}" = "0 7 * * 6" ]; then MODE=search; else MODE=daily; fi
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Mode: $MODE"
 
       - name: Checkout data branch (create it when missing)
         run: |
@@ -66,6 +84,7 @@ jobs:
         run: python -m pytest tests/jarvis -q
 
       - name: Update data
+        if: steps.mode.outputs.mode == 'daily'
         run: |
           set -euo pipefail
           LIMIT="${{ github.event.inputs.limit }}"
@@ -81,6 +100,42 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Train and predict
+        if: steps.mode.outputs.mode == 'daily'
+        run: |
+          set -euo pipefail
+          python -m jarvis.train --data-dir data | tee train.json
+          {
+            echo '### Training and predictions'
+            echo '```json'
+            cat train.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Simulated scorecard
+        if: steps.mode.outputs.mode == 'simulate'
+        run: |
+          set -euo pipefail
+          python -m jarvis.train --data-dir data --simulate | tee simulate.json
+          {
+            echo '### Simulated scorecard (not live results)'
+            echo '```json'
+            cat simulate.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Weekly recipe search
+        if: steps.mode.outputs.mode == 'search'
+        run: |
+          set -euo pipefail
+          python -m jarvis.train --data-dir data --search | tee search.json
+          {
+            echo '### Recipe search'
+            echo '```json'
+            cat search.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Commit and push data
         run: |
           set -euo pipefail
@@ -90,5 +145,5 @@ jobs:
             echo "No data changes; nothing to commit."
             exit 0
           fi
-          git commit --quiet -m "data: $(date +%F)"
+          git commit --quiet -m "data: $(date +%F) (${{ steps.mode.outputs.mode }})"
           git push origin HEAD:data

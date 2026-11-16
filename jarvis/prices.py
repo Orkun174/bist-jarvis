@@ -74,14 +74,15 @@ def _clean(frame: pd.DataFrame, session: pd.Timestamp) -> pd.DataFrame:
         index = index.tz_localize(None)
     frame.index = index.normalize()
     frame = frame.dropna(subset=["Close"])
+    frame["Volume"] = frame["Volume"].fillna(0.0)
     return frame[frame.index <= session]
 
 
-def _download_group(download: Downloader, tickers: list[str], start, session) -> dict:
+def _download_group(download: Downloader, symbols: list[str], start, session) -> dict:
     try:
-        return download([yahoo_symbol(t) for t in tickers], pd.Timestamp(start), session)
+        return download(symbols, pd.Timestamp(start), session)
     except Exception as error:
-        LOG.warning("İndirme başarısız (%d hisse): %s", len(tickers), error)
+        LOG.warning("İndirme başarısız (%d sembol): %s", len(symbols), error)
         return {}
 
 
@@ -90,6 +91,7 @@ def update_prices(
     tickers: list[str],
     session: pd.Timestamp,
     download: Downloader = yahoo_download,
+    symbol_of: Callable[[str], str] = yahoo_symbol,
 ) -> dict[str, str]:
     """Bring every ticker's stored history up to `session`.
 
@@ -119,9 +121,9 @@ def update_prices(
 
     rebased: list[str] = []
     for start, group in requests.items():
-        frames = _download_group(download, group, start, session)
+        frames = _download_group(download, [symbol_of(t) for t in group], start, session)
         for ticker in group:
-            cleaned = _clean(frames.get(yahoo_symbol(ticker)), session)
+            cleaned = _clean(frames.get(symbol_of(ticker)), session)
             if ticker in last_bars:
                 last_day, last_close = last_bars[ticker]
                 if last_day in cleaned.index:
@@ -138,9 +140,9 @@ def update_prices(
 
     if rebased:
         LOG.info("Düzeltme katsayısı değişmiş, geçmiş yeniden indiriliyor: %s", ", ".join(rebased))
-        frames = _download_group(download, rebased, full_start, session)
+        frames = _download_group(download, [symbol_of(t) for t in rebased], full_start, session)
         for ticker in rebased:
-            cleaned = _clean(frames.get(yahoo_symbol(ticker)), session)
+            cleaned = _clean(frames.get(symbol_of(ticker)), session)
             if cleaned.empty or cleaned.index[-1] <= last_bars[ticker][0]:
                 statuses[ticker] = "fetch_failed"
                 continue
