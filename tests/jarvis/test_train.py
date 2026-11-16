@@ -60,7 +60,7 @@ def test_first_run_trains_and_records(tmp_path):
     daily_file = json.loads((tmp_path / "daily" / "2026-11-13.json").read_text(encoding="utf-8"))
     assert daily_file["model"]["checks"]["drift"] == {"ok": True, "reason": "no_previous_model"}
     assert len(daily_file["top"]) == 10 and daily_file["eligible"] == 12
-    assert 0.52 <= daily_file["threshold"] <= 0.65
+    assert "threshold" not in daily_file
     history = (tmp_path / "models" / "history.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(history) == 1 and json.loads(history[0])["weights_changed"] is True
     assert (tmp_path / "scorecard" / "scorecard.json").exists()
@@ -117,16 +117,14 @@ def test_no_champion_and_training_blocked_records_nothing(tmp_path):
 def test_failed_health_check_makes_no_recommendations(tmp_path, monkeypatch):
     store, _ = prepare(tmp_path)
     monkeypatch.setattr(train_module, "health_check", lambda scores: {"ok": False, "mean_rank_ic": -0.1, "days": 120})
-    monkeypatch.setattr(train_module, "upper_threshold", lambda value: 0.0)
     summary = daily(tmp_path)
     assert summary["health_ok"] is False and summary["recommendations"] == 0
     assert not read_ledger(store)["recommended"].any()
 
 
-def test_healthy_model_recommends_top_five_above_threshold(tmp_path, monkeypatch):
+def test_healthy_model_recommends_top_five_every_day(tmp_path, monkeypatch):
     store, _ = prepare(tmp_path)
     monkeypatch.setattr(train_module, "health_check", lambda scores: {"ok": True, "mean_rank_ic": 0.1, "days": 120})
-    monkeypatch.setattr(train_module, "upper_threshold", lambda value: 0.0)
     summary = daily(tmp_path)
     assert summary["recommendations"] == 5
     assert int(read_ledger(store)["recommended"].sum()) == 5
@@ -147,7 +145,6 @@ def test_fewer_eligible_than_top_n(tmp_path, monkeypatch):
     universe = store.read_table("universe/universe")
     universe.loc[~universe["ticker"].isin(names[:3]), ["eligible", "reason"]] = [False, "low_liquidity"]
     store.write_table("universe/universe", universe)
-    monkeypatch.setattr(train_module, "upper_threshold", lambda value: 0.0)
     monkeypatch.setattr(train_module, "health_check", lambda scores: {"ok": True, "mean_rank_ic": 0.1, "days": 120})
     summary = daily(tmp_path)
     assert summary["recommendations"] == 3

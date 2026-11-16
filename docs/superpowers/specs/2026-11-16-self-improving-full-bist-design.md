@@ -133,8 +133,15 @@ Bir hisse bir gün için "uygun" sayılmak için hepsini sağlamalı:
 4. Üzerinde etkin VBTS tedbiri (brüt takas, kredili işlem/açığa satış
    yasağı, tek fiyat vb.) yok.
 5. Son 20 seansta 5'ten fazla tavan/taban kapanışı yok.
+6. Düzensiz davranış yok: son 20 seansta günlük getiri oynaklığı %4,5'i
+   aşmamış ve son 120 seansta fiyat ikiye katlanmamış olmalı. Tetiklenince
+   dışlama 20 seans sürer. *(2026-11-16'da eklendi. Borsanın oynaklık
+   bazlı tedbirlerinin geçmişi olmadığı için onun yerine geçen bir kural.
+   Eşikler yalnızca Ağustos-Eylül 2026 tedbir listesine bakılarak seçildi,
+   getirilere bakılmadı: likit tedbirli hisselerin %72'sini tedbirden bir
+   gün önce yakaladı, diğer likit hisselerin yaklaşık %14'ünü de dışladı.)*
 
-Eğitimde 1, 2 ve 5 **o günün bilgisiyle** (point-in-time) hesaplanır. 3 ve
+Eğitimde 1, 2, 5 ve 6 **o günün bilgisiyle** (point-in-time) hesaplanır. 3 ve
 4 için geçmiş listeler güvenilir biçimde bulunamayabilir; bu durumda bu iki
 kural yalnızca ileriye dönük uygulanır ve her gün `universe.parquet`'e
 kaydedilerek zamanla geçmiş oluşur. *(Uygulayıcı: 3 ve 4 için makineyle
@@ -214,8 +221,10 @@ Veri: 412 hisse uygun · 9 karantina · 187 filtre dışı
 Yatırım tavsiyesi değildir.
 ```
 
-- *(Benim kararım.)* 5 öneri; yalnızca olasılığı modelin eşiğini geçenler.
-  Hiçbiri geçmezse "bugün öneri yok" yazılır, liste doldurulmaz.
+- Her gün en yüksek sıralı 5 hisse önerilir; model sağlık kontrolünü
+  geçemezse o gün "öneri yok" yazılır. *(2026-11-16'da kullanıcı kararıyla
+  değişti: olasılığın mutlak değeri bilgi taşımadığı için eşik kaldırıldı,
+  olasılık yalnızca sıralama için kullanılıyor.)*
 - "Neden" satırı: o hissenin en etkili 2-3 SHAP özelliği, sade Türkçe.
 - Haber duygusu yalnızca bu 5 hisse için hesaplanır.
 
