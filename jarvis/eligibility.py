@@ -1,6 +1,7 @@
 """Eligibility (manipulation) filter.
 
-A ticker must have enough history, enough liquidity and few limit-move days.
+A ticker must have enough history, enough liquidity, few limit-move days
+and no erratic price behaviour (extreme volatility or a parabolic run-up).
 `eligibility_history` computes this for every past day using only data known
 on that day, so training rows can be filtered without lookahead.
 """
@@ -11,8 +12,9 @@ import numpy as np
 import pandas as pd
 
 from jarvis.config import (
-    LIMIT_MOVE, LIQUIDITY_WINDOW, MAX_LIMIT_DAYS, MIN_HISTORY_SESSIONS,
-    MIN_MEDIAN_TURNOVER_TRY,
+    ERRATIC_COOLDOWN, LIMIT_MOVE, LIQUIDITY_WINDOW, MAX_LIMIT_DAYS, MAX_RUNUP_120,
+    MAX_VOLATILITY_20, MIN_HISTORY_SESSIONS, MIN_MEDIAN_TURNOVER_TRY, RUNUP_WINDOW,
+    VOLATILITY_WINDOW,
 )
 from jarvis.exclusions import excluded_on
 from jarvis.store import Store
@@ -34,12 +36,21 @@ def eligibility_history(frame: pd.DataFrame) -> pd.DataFrame:
     result["limit_days"] = (
         limit_day.rolling(LIQUIDITY_WINDOW, min_periods=1).sum().astype(int)
     )
+    returns = frame["Close"].pct_change()
+    result["volatility_20"] = returns.rolling(VOLATILITY_WINDOW).std()
+    result["runup_120"] = frame["Close"] / frame["Close"].shift(RUNUP_WINDOW) - 1.0
+    triggered = (result["volatility_20"] > MAX_VOLATILITY_20) | (result["runup_120"] > MAX_RUNUP_120)
+    # The exclusion lasts ERRATIC_COOLDOWN sessions after the last trigger.
+    erratic = triggered.astype(int).rolling(ERRATIC_COOLDOWN + 1, min_periods=1).max() > 0
+
     short = result["sessions"] < MIN_HISTORY_SESSIONS
     illiquid = ~(result["median_turnover"] >= MIN_MEDIAN_TURNOVER_TRY)
     limits = result["limit_days"] > MAX_LIMIT_DAYS
     # First failing rule wins, in this order.
     result["reason_pit"] = np.select(
-        [short, illiquid, limits], ["short_history", "low_liquidity", "limit_moves"], default=""
+        [short, illiquid, limits, erratic],
+        ["short_history", "low_liquidity", "limit_moves", "erratic"],
+        default="",
     )
     result["eligible_pit"] = result["reason_pit"] == ""
     return result
