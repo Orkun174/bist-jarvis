@@ -8,7 +8,7 @@
       },
       "drift": {
         "ok": true,
-        "rank_corr": 0.8955085398685959
+        "rank_corr": 1.0
       },
       "health": {
         "days": 120,
@@ -29,26 +29,76 @@
     {
       "prob": 0.4899,
       "rank": 1,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "macro_VIX_5d_mean_lag"
+        }
+      ],
       "ticker": "ARCLK"
     },
     {
       "prob": 0.4832,
       "rank": 2,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "macro_VIX_5d_mean_lag"
+        }
+      ],
       "ticker": "TSPOR"
     },
     {
       "prob": 0.483,
       "rank": 3,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "macro_VIX_5d_mean_lag"
+        }
+      ],
       "ticker": "DOCO"
     },
     {
       "prob": 0.4825,
       "rank": 4,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "macro_VIX_5d_mean_lag"
+        }
+      ],
       "ticker": "RGYAS"
     },
     {
       "prob": 0.4821,
       "rank": 5,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "macro_VIX_5d_mean_lag"
+        }
+      ],
       "ticker": "FROTO"
     }
   ],
