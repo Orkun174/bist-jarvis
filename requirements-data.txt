@@ -1,0 +1,12 @@
+# Dependencies of the daily data job (jarvis/ package) only.
+# The full application set lives in requirements.txt.
+numpy<2
+pandas<3
+pyarrow==19.0.1
+requests
+beautifulsoup4
+yfinance
+isyatirimhisse>=5.0.0
+exchange-calendars==4.13.2
+tzdata
+pytest
