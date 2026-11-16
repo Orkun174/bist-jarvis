@@ -155,21 +155,39 @@ Her dışlanan hissenin nedeni kayıtlıdır; PC uygulaması bunu gösterir.
 - Haber duygusu modelin girdisi **değildir** (600 hisse için geçmiş haber
   kapsamı yok). Yalnızca öneri mesajında ve PC'de bilgi olarak gösterilir.
 
-### 6.5 Sınav: şampiyon ve aday
-Aday model yalnızca şu durumda şampiyon olur:
+### 6.5 Sınav ve güvenlik kontrolleri
+*(2026-11-16'da Parça 2 planı yazılırken düzeltildi. İlk taslak, bugün
+eğitilen modeli dünkü modelle "ikisinin de görmediği" bir pencerede
+karşılaştırıyordu; günlük eğitimde böyle bir pencere yoktur, çünkü iki
+model de neredeyse aynı veriyi görmüştür. Karşılaştırma ya eski modeli
+kayırır ya da yenisini haksız yere cezalandırır.)*
 
-- Sınav penceresi: adayın eğitiminde hiç görülmemiş son 60 seans
-  (adayın sınav sürümü bu pencereden önce kesilerek eğitilir).
-- Ölçüt: günlük ilk-N seçimin XU100'e göre ortalama fazla getirisi
-  (20 baz puan işlem maliyeti düşülmüş) ve sıra korelasyonu (rank IC).
-- Aday iki ölçütte de şampiyondan iyi olmalı ve fark bootstrap ile
-  %80 güvenle sıfırdan büyük olmalı. *(Benim kararım; ayarlanabilir.)*
-- Aksi halde şampiyon kalır. Karar ve skorlar `models/history.jsonl`'e
-  yazılır; önceki şampiyon saklanır (geri dönüş tek dosya kopyası).
+Bu yüzden iki ayrı şey ayrı korunur:
 
-Dürüst beklenti: günlük eğitimde çoğu gün şampiyon değişmeyecek. Sistemin
-"kendini iyileştirmesi", yalnızca gerçekten daha iyi olan modelin içeri
-alınması demektir.
+**a) Tarif (haftalık, sınavla).** "Tarif" = hiperparametreler + özellik
+listesi + eğitim penceresi. Cumartesi araması yeni tarif adayları üretir.
+Aday tarif ile şampiyon tarif, son 60 seansta **aynı yöntemle** ileriye
+yürütülür (her 5 seansta, o güne kadar bilinen veriyle yeniden eğitilerek).
+Ölçüt: günlük ilk-N seçimin XU100'e göre ortalama fazla getirisi (20 baz
+puan maliyet düşülmüş) ve sıra korelasyonu (rank IC). Aday iki ölçütte de
+iyi olmalı ve günlük farkların eşleştirilmiş bootstrap'i %80 güvenle
+sıfırdan büyük olmalı. Aksi halde şampiyon tarif kalır.
+
+**b) Ağırlıklar (günlük, güvenlik kontrolüyle).** Şampiyon tarif her gün en
+yeni veriyle yeniden eğitilir. Yeni ağırlıklar ancak şu kontrolleri
+geçerse devreye girer; geçemezse dünkü ağırlıklar kalır ve Telegram
+mesajında nedeni yazar:
+
+- Veri: `training_allowed` doğru ve yeterli eğitim satırı var.
+- Sağlık: tarifin son 120 seanslık ileriye yürüyen rank IC'si sıfırdan
+  büyük. Değilse "model alarmı" verilir ve o gün öneri yapılmaz.
+- Kayma: yeni ağırlıkların bugünkü sıralaması, dünkü ağırlıkların aynı
+  gün için ürettiği sıralamayla en az 0,5 korelasyonlu. Değilse bir hata
+  ya da veri kazası varsayılır.
+
+Bütün kararlar ve skorlar `models/history.jsonl`'e yazılır; önceki
+ağırlıklar saklanır (geri dönüş tek dosya kopyası). Sistemin gerçekten
+iyileşip iyileşmediğinin kanıtı sınav değil, canlı karnedir (6.6).
 
 ### 6.6 Tahmin defteri ve karne
 - Her gün, uygun her hisse için: tarih, hisse, olasılık, sıra, model
