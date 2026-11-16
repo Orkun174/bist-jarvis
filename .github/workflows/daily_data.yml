@@ -22,6 +22,10 @@ on:
         description: "daily only: process the first N symbols (leave empty for all)"
         required: false
         default: ""
+      notify:
+        description: "daily only: send the Telegram message"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -135,6 +139,8 @@ jobs:
             cat search.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          # Refresh the simulated scorecard with the (possibly new) recipe.
+          python -m jarvis.train --data-dir data --simulate
 
       - name: Commit and push data
         run: |
@@ -147,3 +153,10 @@ jobs:
           fi
           git commit --quiet -m "data: $(date +%F) (${{ steps.mode.outputs.mode }})"
           git push origin HEAD:data
+
+      - name: Send Telegram message
+        if: steps.mode.outputs.mode == 'daily' && github.event.inputs.notify != 'false'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m jarvis.notify --data-dir data

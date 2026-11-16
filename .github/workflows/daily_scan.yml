@@ -1,9 +1,9 @@
 # .github/workflows/daily_scan.yml
 name: Daily BIST Portfolio Scan
 
+# Retired 2026-11-16: the daily message now comes from daily_data.yml
+# (full-BIST pipeline). Kept for manual runs only.
 on:
-  schedule:
-    - cron: "30 15 * * 1-5"
   workflow_dispatch:
 
 permissions:

@@ -128,6 +128,11 @@ def test_healthy_model_recommends_top_five_every_day(tmp_path, monkeypatch):
     summary = daily(tmp_path)
     assert summary["recommendations"] == 5
     assert int(read_ledger(store)["recommended"].sum()) == 5
+    daily_file = json.loads((tmp_path / "daily" / "2026-11-13.json").read_text(encoding="utf-8"))
+    for item in daily_file["recommendations"]:
+        assert 1 <= len(item["reasons"]) <= 2
+        assert item["reasons"][0]["feature"] in FEATURES
+        assert item["reasons"][0]["direction"] in ("up", "down")
 
 
 def test_drift_failure_keeps_old_weights(tmp_path, monkeypatch):

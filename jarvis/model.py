@@ -123,3 +123,30 @@ def load_model(root: Path | str) -> tuple[XGBClassifier, Recipe, dict] | None:
     model = new_classifier(recipe)
     model.load_model(weights)
     return model, recipe, meta
+
+
+def explain(
+    model: XGBClassifier, recipe: Recipe, rows: pd.DataFrame, top: int = 2
+) -> list[list[dict]]:
+    """For each row, the `top` features that moved its score most, with direction.
+
+    Uses XGBoost's own per-prediction contributions (log-odds); "up" means the
+    feature raised this stock's score, "down" that it lowered it.
+    """
+    if rows.empty:
+        return []
+    import xgboost
+
+    matrix = xgboost.DMatrix(_matrix(recipe, rows), feature_names=list(recipe.features))
+    contributions = model.get_booster().predict(matrix, pred_contribs=True)[:, :-1]  # drop bias
+    result = []
+    for values in contributions:
+        order = np.argsort(-np.abs(values))[:top]
+        result.append(
+            [
+                {"feature": recipe.features[i], "direction": "up" if values[i] > 0 else "down"}
+                for i in order
+                if values[i] != 0
+            ]
+        )
+    return result

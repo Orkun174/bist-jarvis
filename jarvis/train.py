@@ -26,7 +26,7 @@ from jarvis.gate import compare_recipes, drift_check, health_check
 from jarvis.ledger import LEDGER_COLUMNS, build_entries, empty_ledger, mature, read_ledger, record
 from jarvis.macro import REQUIRED_MACRO, load_macro, update_macro
 from jarvis.metrics import daily_scores, summarize
-from jarvis.model import DEFAULT_RECIPE, Recipe, fit, load_model, predict, save_model
+from jarvis.model import DEFAULT_RECIPE, Recipe, explain, fit, load_model, predict, save_model
 from jarvis.prices import Downloader, yahoo_download
 from jarvis.scorecard import scorecard
 from jarvis.store import Store
@@ -202,6 +202,10 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
         todays = todays[todays["date"] == session]
         as_item = lambda row: {"ticker": row.ticker, "prob": round(float(row.prob), 4), "rank": int(row.rank)}
         recommendations = [as_item(row) for row in todays[todays["recommended"]].itertuples()]
+        if recommendations:
+            picked = today_rows.set_index("ticker").loc[[item["ticker"] for item in recommendations]]
+            for item, reasons in zip(recommendations, explain(model, active_recipe, picked)):
+                item["reasons"] = reasons
         top = [as_item(row) for row in todays.head(10).itertuples()]
 
     model_info = {
