@@ -10,3 +10,5 @@ isyatirimhisse>=5.0.0
 exchange-calendars==4.13.2
 tzdata
 pytest
+xgboost
+scikit-learn
