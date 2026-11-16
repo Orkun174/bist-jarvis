@@ -80,3 +80,23 @@ def test_recipe_roundtrip_and_id():
     assert Recipe.from_dict(SMALL.to_dict()) == SMALL
     assert len(SMALL.recipe_id) == 10
     assert DEFAULT_RECIPE.features == FEATURES and DEFAULT_RECIPE.train_years == 3
+
+
+def test_explain_names_the_driving_feature_first():
+    from jarvis.model import explain
+
+    train, test = synthetic_rows(seed=0), synthetic_rows(seed=1)
+    model = fit(SMALL, train)
+    probabilities = predict(model, SMALL, test)
+    strongest = test.loc[[probabilities.idxmax(), probabilities.idxmin()]]
+    reasons = explain(model, SMALL, strongest, top=2)
+    assert len(reasons) == 2 and all(len(item) == 2 for item in reasons)
+    assert reasons[0][0] == {"feature": "CMF_20", "direction": "up"}
+    assert reasons[1][0] == {"feature": "CMF_20", "direction": "down"}
+
+
+def test_explain_empty_rows():
+    from jarvis.model import explain
+
+    model = fit(SMALL, synthetic_rows(seed=0))
+    assert explain(model, SMALL, synthetic_rows(seed=1).iloc[0:0]) == []
