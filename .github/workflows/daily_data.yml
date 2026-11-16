@@ -1,0 +1,94 @@
+# .github/workflows/daily_data.yml
+# Updates prices, quality report and eligibility for the whole BIST and
+# commits the result to the `data` branch.
+name: Daily BIST Data
+
+on:
+  schedule:
+    # 19:30 UTC = 22:30 TRT, weekdays. Late enough for Is Yatirim to have
+    # published the session close used by the cross-check.
+    - cron: "30 19 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Only process the first N symbols (leave empty for all)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bist-daily-data
+  cancel-in-progress: false
+
+jobs:
+  daily-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      TZ: Europe/Istanbul
+      PYTHONUNBUFFERED: "1"
+      PYTHONIOENCODING: utf-8
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Checkout data branch (create it when missing)
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth 1 origin data:refs/remotes/origin/data
+            git worktree add data origin/data
+            git -C data switch -C data
+          else
+            git worktree add --detach data
+            git -C data switch --orphan data
+            git -C data rm -rf --quiet . >/dev/null 2>&1 || true
+          fi
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-data.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements-data.txt
+
+      - name: Run unit tests
+        run: python -m pytest tests/jarvis -q
+
+      - name: Update data
+        run: |
+          set -euo pipefail
+          LIMIT="${{ github.event.inputs.limit }}"
+          if [ -n "$LIMIT" ]; then
+            python -m jarvis.pipeline --data-dir data --limit "$LIMIT" | tee summary.json
+          else
+            python -m jarvis.pipeline --data-dir data | tee summary.json
+          fi
+          {
+            echo '### Daily BIST data'
+            echo '```json'
+            cat summary.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit and push data
+        run: |
+          set -euo pipefail
+          cd data
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No data changes; nothing to commit."
+            exit 0
+          fi
+          git commit --quiet -m "data: $(date +%F)"
+          git push origin HEAD:data
