@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+backups/
+*.exe
+data_cache/
+training_reports/
+data/
+debug_llm_payload.json
+.env
+.superpowers/
+.pytest_cache/
+
+# Scratch work; keep the small THYAO backfill inputs live_inference.py reads.
+work/*
+!work/backfill/
+work/backfill/*
+!work/backfill/THYAO/
+work/backfill/THYAO/http/
+5.0.0

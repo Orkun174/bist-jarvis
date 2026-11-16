@@ -1,0 +1,22 @@
+# Runtime dependencies (mirrors .github/workflows/daily_scan.yml)
+numpy<2
+pandas<3
+plotly<6.0.0
+vectorbt
+xgboost
+yfinance
+isyatirimhisse>=5.0.0
+exchange-calendars==4.13.2
+requests
+streamlit
+shap
+scikit-learn
+feedparser
+beautifulsoup4
+transformers>=4.48,<5
+huggingface_hub
+tzdata
+pyarrow==19.0.1  # newer releases require NumPy 2; project pins numpy<2
+pytest
+# torch is installed separately from the CPU index:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
