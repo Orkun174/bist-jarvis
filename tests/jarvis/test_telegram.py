@@ -74,7 +74,8 @@ def test_reasons_separate_supporting_and_opposing_factors():
 def test_message_states_that_the_model_is_unproven():
     text = format_message(DAILY, QUALITY, LIVE_EMPTY, SIMULATED)
     assert "Model henüz kanıtlanmadı" in text
-    assert "245 seans" in text and "%+0,04" in text and "%47" in text
+    assert "245 seans" in text and "%+0,04" in text and "kazanan gün oranı %47" in text
+    assert "'inde" not in text
 
 
 def test_message_live_scorecard_empty_and_filled():

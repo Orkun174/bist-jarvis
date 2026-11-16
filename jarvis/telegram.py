@@ -83,7 +83,7 @@ def _unproven_line(simulated: dict | None) -> str:
             "⚠️ Model henüz kanıtlanmadı. Simülasyonda ilk 5 seçim "
             f"{net['days']} seans boyunca 5 günde endekse göre ortalama "
             f"{_percent(net['mean_top_excess'])} getirdi (maliyet düşülmüş); "
-            f"günlerin {_percent(net['hit_rate'], 0, signed=False)}'inde kazandı."
+            f"kazanan gün oranı {_percent(net['hit_rate'], 0, signed=False)}."
         )
     return "⚠️ Model henüz kanıtlanmadı; canlı karne birikene kadar bu sıralama deneme amaçlıdır."
 

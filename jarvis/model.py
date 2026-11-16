@@ -125,23 +125,41 @@ def load_model(root: Path | str) -> tuple[XGBClassifier, Recipe, dict] | None:
     return model, recipe, meta
 
 
+def _contributions(model: XGBClassifier, recipe: Recipe, rows: pd.DataFrame) -> np.ndarray:
+    import xgboost
+
+    matrix = xgboost.DMatrix(_matrix(recipe, rows), feature_names=list(recipe.features))
+    return model.get_booster().predict(matrix, pred_contribs=True)[:, :-1]  # drop bias
+
+
 def explain(
-    model: XGBClassifier, recipe: Recipe, rows: pd.DataFrame, top: int = 2
+    model: XGBClassifier,
+    recipe: Recipe,
+    rows: pd.DataFrame,
+    top: int = 2,
+    only: tuple[str, ...] | None = None,
+    reference: pd.DataFrame | None = None,
 ) -> list[list[dict]]:
     """For each row, the `top` features that moved its score most, with direction.
 
     Uses XGBoost's own per-prediction contributions (log-odds); "up" means the
     feature raised this stock's score, "down" that it lowered it.
+
+    `only` restricts the answer to a subset of features (e.g. the stock-specific
+    ones: macro features are identical for every stock on a given day and cannot
+    explain a ranking). `reference` is a set of peer rows; contributions are then
+    measured against the peers' average, so the answer names what sets the stock
+    apart from them rather than what all of them share.
     """
     if rows.empty:
         return []
-    import xgboost
-
-    matrix = xgboost.DMatrix(_matrix(recipe, rows), feature_names=list(recipe.features))
-    contributions = model.get_booster().predict(matrix, pred_contribs=True)[:, :-1]  # drop bias
+    contributions = _contributions(model, recipe, rows)
+    if reference is not None and not reference.empty:
+        contributions = contributions - _contributions(model, recipe, reference).mean(axis=0)
+    allowed = [i for i, name in enumerate(recipe.features) if only is None or name in only]
     result = []
     for values in contributions:
-        order = np.argsort(-np.abs(values))[:top]
+        order = sorted(allowed, key=lambda i: -abs(values[i]))[:top]
         result.append(
             [
                 {"feature": recipe.features[i], "direction": "up" if values[i] > 0 else "down"}

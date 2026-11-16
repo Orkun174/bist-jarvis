@@ -22,6 +22,7 @@ from jarvis.config import (
     EXAM_SESSIONS, HEALTH_SESSIONS, HORIZON, MIN_TRAIN_ROWS, SIM_SESSIONS,
 )
 from jarvis.dataset import build_rows, prediction_slice, training_slice
+from jarvis.features import LOCAL_FEATURES
 from jarvis.gate import compare_recipes, drift_check, health_check
 from jarvis.ledger import LEDGER_COLUMNS, build_entries, empty_ledger, mature, read_ledger, record
 from jarvis.macro import REQUIRED_MACRO, load_macro, update_macro
@@ -204,7 +205,12 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
         recommendations = [as_item(row) for row in todays[todays["recommended"]].itertuples()]
         if recommendations:
             picked = today_rows.set_index("ticker").loc[[item["ticker"] for item in recommendations]]
-            for item, reasons in zip(recommendations, explain(model, active_recipe, picked)):
+            # Macro features are the same for every stock today, and the eligible
+            # stocks share much of their profile; name what sets each pick apart.
+            explained = explain(
+                model, active_recipe, picked, only=LOCAL_FEATURES, reference=today_rows
+            )
+            for item, reasons in zip(recommendations, explained):
                 item["reasons"] = reasons
         top = [as_item(row) for row in todays.head(10).itertuples()]
 

@@ -100,3 +100,37 @@ def test_explain_empty_rows():
 
     model = fit(SMALL, synthetic_rows(seed=0))
     assert explain(model, SMALL, synthetic_rows(seed=1).iloc[0:0]) == []
+
+
+def two_factor_rows(n=3000, seed=0):
+    rng = np.random.default_rng(seed)
+    data = pd.DataFrame(rng.normal(size=(n, len(FEATURES))), columns=list(FEATURES))
+    signal = data["CMF_20"] + 0.6 * data["ADX_14"] + 0.6 * data["macro_VIX_1d_lag"]
+    data["target"] = (signal + rng.normal(0, 0.1, n) > 0).astype(float)
+    return data
+
+
+def test_explain_can_be_limited_to_stock_specific_features():
+    from jarvis.features import LOCAL_FEATURES
+    from jarvis.model import explain
+
+    model = fit(SMALL, two_factor_rows(seed=0))
+    rows = two_factor_rows(seed=1).head(50)
+    for reasons in explain(model, SMALL, rows, top=3, only=LOCAL_FEATURES):
+        assert all(reason["feature"] in LOCAL_FEATURES for reason in reasons)
+
+
+def test_explain_relative_to_peers_names_what_sets_the_stock_apart():
+    """Everyone shares the same strong CMF; only ADX separates the pick from its peers."""
+    from jarvis.features import LOCAL_FEATURES
+    from jarvis.model import explain
+
+    model = fit(SMALL, two_factor_rows(seed=0))
+    peers = two_factor_rows(seed=1).head(60).copy()
+    peers["CMF_20"] = 2.0
+    peers["ADX_14"] = np.linspace(-2.0, 2.0, len(peers))
+    pick = peers.tail(1)
+    alone = explain(model, SMALL, pick, top=1, only=LOCAL_FEATURES)
+    relative = explain(model, SMALL, pick, top=1, only=LOCAL_FEATURES, reference=peers)
+    assert alone[0][0]["feature"] == "CMF_20"
+    assert relative[0][0] == {"feature": "ADX_14", "direction": "up"}
