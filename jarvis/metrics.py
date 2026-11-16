@@ -2,22 +2,12 @@
 
 from __future__ import annotations
 
-import math
-
 import numpy as np
 import pandas as pd
 
 from jarvis.config import COST_BPS, TOP_N
 
 SCORE_COLUMNS = ["top_excess", "rank_ic", "n"]
-
-
-def upper_threshold(vix_percentile: float) -> float:
-    """Minimum probability for a recommendation; rises with the VIX percentile."""
-    if vix_percentile is None or not math.isfinite(vix_percentile):
-        return 0.52
-    fraction = min(max((float(vix_percentile) - 25.0) / 50.0, 0.0), 1.0)
-    return 0.52 + 0.13 * fraction
 
 
 def _rank_ic(group: pd.DataFrame) -> float:

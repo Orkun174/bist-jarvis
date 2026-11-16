@@ -127,3 +127,59 @@ def test_stale_ticker_uses_only_rows_up_to_session(tmp_path):
     store.write_prices("OLD", bars().iloc[:-40])
     table = eligibility_today(store, ["OLD"], SESSION, no_exclusions(), set())
     assert table.iloc[0]["sessions"] == 260
+
+
+# -- erratic-behaviour rule (proxy for exchange volatility measures) -------
+
+def shaped(returns):
+    """Bars whose close follows `returns` at the end of an otherwise flat series."""
+    frame = bars()
+    closes = frame["Close"].to_numpy().copy()
+    tail = 100.0 * np.cumprod(1.0 + np.asarray(returns, dtype=float))
+    closes[-len(tail):] = tail
+    for name in ("Open", "High", "Low", "Close"):
+        frame[name] = closes
+    return frame
+
+
+def test_high_recent_volatility_is_erratic():
+    swings = [0.06, -0.06] * 10  # 20 sessions of +-6%: std ~6% > 4.5%, no limit days
+    row = last(shaped(swings))
+    assert row["volatility_20"] > 0.045
+    assert row["reason_pit"] == "erratic"
+    assert bool(row["eligible_pit"]) is False
+
+
+def test_calm_volatility_just_below_threshold_is_eligible():
+    swings = [0.04, -0.04] * 10  # std ~4.1%
+    row = last(shaped(swings))
+    assert row["volatility_20"] < 0.045
+    assert row["reason_pit"] == ""
+
+
+def test_price_more_than_doubling_in_120_sessions_is_erratic():
+    steady = [0.008] * 120  # +160% in 120 sessions with tiny daily volatility
+    row = last(shaped(steady))
+    assert row["volatility_20"] < 0.01
+    assert row["runup_120"] > 1.0
+    assert row["reason_pit"] == "erratic"
+
+
+def test_strong_but_not_doubling_trend_is_eligible():
+    steady = [0.005] * 120  # +82%
+    row = last(shaped(steady))
+    assert row["runup_120"] < 1.0
+    assert row["reason_pit"] == ""
+
+
+def test_erratic_flag_persists_for_cooldown_then_clears():
+    burst = [0.06, -0.06] * 10
+    recently = shaped(burst + [0.0] * 15)   # volatility already back under the limit
+    long_ago = shaped(burst + [0.0] * 45)   # window + 20-session cooldown both passed
+    assert last(recently)["volatility_20"] < 0.045
+    assert last(recently)["reason_pit"] == "erratic"
+    assert last(long_ago)["reason_pit"] == ""
+
+
+def test_limit_moves_take_priority_over_erratic():
+    assert last(with_limit_days(6))["reason_pit"] == "limit_moves"

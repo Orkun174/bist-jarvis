@@ -23,6 +23,16 @@ LIQUIDITY_WINDOW = 20
 MIN_MEDIAN_TURNOVER_TRY = 50_000_000
 LIMIT_MOVE = 0.095             # |daily return| at or above this counts as a limit day
 MAX_LIMIT_DAYS = 5
+# Erratic-behaviour rule: a point-in-time proxy for the exchange's volatility
+# based measures (VBTS), whose history is not available. Thresholds were chosen
+# against the Aug-Sep 2026 measure list only (never against returns): the rule
+# flagged 72% of the listed liquid names the day before their measure began,
+# at the cost of also excluding about 14% of other liquid names.
+VOLATILITY_WINDOW = 20
+MAX_VOLATILITY_20 = 0.045      # std of daily returns over the window
+RUNUP_WINDOW = 120
+MAX_RUNUP_120 = 1.0            # price more than doubled over the window
+ERRATIC_COOLDOWN = 20          # sessions the exclusion lasts after the last trigger
 
 # Universe sanity floor: fewer symbols than this means the source page broke.
 MIN_UNIVERSE_SIZE = 300

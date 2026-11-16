@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from jarvis.metrics import daily_scores, summarize, upper_threshold
+from jarvis.metrics import daily_scores, summarize
 
 DAY = pd.Timestamp("2026-11-13")
 
@@ -16,15 +16,6 @@ def predictions(probs, excess, day=DAY):
             "fwd_excess": excess,
         }
     )
-
-
-def test_upper_threshold_follows_vix_percentile():
-    assert upper_threshold(0.0) == pytest.approx(0.52)
-    assert upper_threshold(25.0) == pytest.approx(0.52)
-    assert upper_threshold(50.0) == pytest.approx(0.585)
-    assert upper_threshold(75.0) == pytest.approx(0.65)
-    assert upper_threshold(100.0) == pytest.approx(0.65)
-    assert upper_threshold(float("nan")) == pytest.approx(0.52)
 
 
 def test_top_excess_subtracts_cost_once():

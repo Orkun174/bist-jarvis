@@ -22,11 +22,10 @@ from jarvis.config import (
     EXAM_SESSIONS, HEALTH_SESSIONS, HORIZON, MIN_TRAIN_ROWS, SIM_SESSIONS,
 )
 from jarvis.dataset import build_rows, prediction_slice, training_slice
-from jarvis.features import VIX_PERCENTILE
 from jarvis.gate import compare_recipes, drift_check, health_check
 from jarvis.ledger import LEDGER_COLUMNS, build_entries, empty_ledger, mature, read_ledger, record
 from jarvis.macro import REQUIRED_MACRO, load_macro, update_macro
-from jarvis.metrics import daily_scores, summarize, upper_threshold
+from jarvis.metrics import daily_scores, summarize
 from jarvis.model import DEFAULT_RECIPE, Recipe, fit, load_model, predict, save_model
 from jarvis.prices import Downloader, yahoo_download
 from jarvis.scorecard import scorecard
@@ -185,11 +184,8 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
 
     recommendations: list[dict] = []
     top: list[dict] = []
-    threshold = None
     if active is not None and not today_rows.empty:
         model, active_recipe, meta = active
-        vix_percentile = today_rows[VIX_PERCENTILE].dropna()
-        threshold = upper_threshold(float(vix_percentile.iloc[0]) if len(vix_percentile) else float("nan"))
         predictions = pd.DataFrame(
             {
                 "ticker": today_rows["ticker"].to_numpy(),
@@ -199,7 +195,7 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
         )
         record(
             store, session, predictions, meta.get("model_id", "unknown"),
-            meta.get("recipe_id", active_recipe.recipe_id), threshold,
+            meta.get("recipe_id", active_recipe.recipe_id),
             allow_recommendations=bool(checks["health"]["ok"]),
         )
         todays = read_ledger(store)
@@ -222,7 +218,6 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
                 "session": day,
                 "recommendations": recommendations,
                 "top": top,
-                "threshold": threshold,
                 "eligible": len(today_rows),
                 "model": model_info,
                 "scorecard_live": live_card["windows"]["60"],
@@ -250,10 +245,8 @@ def _simulated_ledger(predictions: pd.DataFrame, rows: pd.DataFrame, recipe: Rec
     merged = predictions.merge(closes, on=["date", "ticker"], how="left")
     pieces = []
     for day, group in merged.groupby("date", sort=True):
-        vix_percentile = group[VIX_PERCENTILE].dropna()
-        threshold = upper_threshold(float(vix_percentile.iloc[0]) if len(vix_percentile) else float("nan"))
         entries = build_entries(day, group[["ticker", "prob", "entry_close"]], "simulation",
-                                recipe.recipe_id, threshold)
+                                recipe.recipe_id)
         excess = group.set_index("ticker")["fwd_excess"].reindex(entries["ticker"]).to_numpy()
         entries["fwd_excess"] = excess
         entries["matured"] = ~np.isnan(excess)

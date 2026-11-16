@@ -48,10 +48,15 @@ def build_entries(
     predictions: pd.DataFrame,
     model_id: str,
     recipe_id: str,
-    threshold: float,
+    threshold: float = 0.0,
     allow_recommendations: bool = True,
 ) -> pd.DataFrame:
-    """Ledger rows for one day from `predictions` (ticker, prob, entry_close)."""
+    """Ledger rows for one day from `predictions` (ticker, prob, entry_close).
+
+    The top TOP_N by probability are recommended. Probabilities are used for
+    ranking only: their absolute level proved uninformative, so `threshold`
+    defaults to 0 and exists for experiments.
+    """
     ordered = predictions.sort_values(["prob", "ticker"], ascending=[False, True]).reset_index(drop=True)
     entries = empty_ledger().reindex(range(len(ordered)))
     entries["date"] = pd.Timestamp(session).normalize()
@@ -75,7 +80,7 @@ def record(
     predictions: pd.DataFrame,
     model_id: str,
     recipe_id: str,
-    threshold: float,
+    threshold: float = 0.0,
     allow_recommendations: bool = True,
     table: str = LEDGER_TABLE,
 ) -> int:
