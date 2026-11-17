@@ -52,6 +52,15 @@ EXTRA_FEATURES = (
 STOCK_FEATURES = LOCAL_FEATURES + EXTRA_FEATURES
 FEATURES_V2 = STOCK_FEATURES + MACRO_FEATURES
 
+# The same stock features as each day's rank among eligible stocks (0-1). An
+# indicator's level drifts with the market's mood; its rank on the day does not.
+RANK_SUFFIX = "_Rank"
+RANKED_SOURCES = tuple(name for name in STOCK_FEATURES if name != TURNOVER_RANK)
+RANKED_FEATURES = tuple(name + RANK_SUFFIX for name in RANKED_SOURCES) + (TURNOVER_RANK,)
+FEATURES_V3 = RANKED_FEATURES + MACRO_FEATURES
+FEATURES_V4 = RANKED_FEATURES            # no macro: pure "which stock today"
+FEATURE_SETS = (FEATURES_V2, FEATURES_V3, FEATURES_V4)
+
 VIX_PERCENTILE = "VIX_Percentile"
 VIX_PERCENTILE_WINDOW = 252
 VIX_PERCENTILE_MIN_PERIODS = 126

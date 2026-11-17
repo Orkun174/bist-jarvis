@@ -200,15 +200,14 @@ def test_search_promotes_only_through_gate(tmp_path, monkeypatch):
 
 
 def test_structural_variants_cover_other_targets_and_extra_features():
-    from jarvis.features import FEATURES_V2
+    from jarvis.features import FEATURE_SETS
     from jarvis.train import structural_variants
 
     variants = structural_variants(SMALL)
-    described = {(recipe.target, recipe.features == FEATURES_V2) for recipe in variants}
-    assert described == {
-        ("cs_median", False), ("risk_adjusted", False),
-        ("sign", True), ("cs_median", True), ("risk_adjusted", True),
-    }
+    described = {(recipe.target, recipe.features) for recipe in variants}
+    targets = ("sign", "cs_median", "risk_adjusted")
+    expected = {(target, features) for target in targets for features in (FEATURES, *FEATURE_SETS)}
+    assert described == expected - {("sign", FEATURES)}
     assert all(recipe.params == SMALL.params for recipe in variants)
     assert SMALL.recipe_id not in {recipe.recipe_id for recipe in variants}
 
@@ -220,6 +219,7 @@ def test_search_tries_structural_variants_first(tmp_path, monkeypatch):
     saved = json.loads((tmp_path / "models" / "search" / "2026-11-13.json").read_text(encoding="utf-8"))
     assert [trial["target"] for trial in saved["trials"][:2]] == ["cs_median", "risk_adjusted"]
     assert {trial["features"] for trial in saved["trials"]} == {24, 33}
+    assert len(saved["trials"]) == 5
     promoted = Recipe.from_dict(json.loads((tmp_path / "models" / "recipe.json").read_text(encoding="utf-8")))
     assert promoted.recipe_id == result["challenger_recipe_id"]
     assert daily(tmp_path)["status"] == "ok"  # the promoted recipe trains and predicts

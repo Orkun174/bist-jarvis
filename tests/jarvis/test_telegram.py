@@ -206,3 +206,11 @@ def test_notify_still_reports_when_nothing_was_produced(tmp_path, monkeypatch):
     text = notify(tmp_path, AS_OF, sender=lambda token, chat, message: sent.append(message))
     assert "Bugün için model sonucu üretilemedi" in text and "16 Kasım 2026" in text
     assert len(sent) == 1
+
+
+def test_ranked_feature_reads_like_the_feature_it_ranks():
+    from jarvis.telegram import _feature_label
+
+    assert _feature_label("CMF_20_Rank") == _feature_label("CMF_20")
+    assert _feature_label("Rel_Return_60D_Rank") == "endekse göre 3 aylık getiri"
+    assert _feature_label("Turnover_Rank") == "işlem hacmi sırası"

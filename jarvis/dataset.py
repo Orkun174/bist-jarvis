@@ -22,8 +22,8 @@ import pandas as pd
 from jarvis.config import EMBARGO_SESSIONS, HORIZON, TRAIN_YEARS
 from jarvis.eligibility import eligibility_history
 from jarvis.features import (
-    EXTRA_FEATURES, FEATURES, LOCAL_FEATURES, TURNOVER_RANK, VIX_PERCENTILE,
-    extra_features, local_features, macro_features,
+    EXTRA_FEATURES, FEATURES, LOCAL_FEATURES, RANK_SUFFIX, RANKED_SOURCES, TURNOVER_RANK,
+    VIX_PERCENTILE, extra_features, local_features, macro_features,
 )
 from jarvis.store import Store
 
@@ -33,7 +33,8 @@ TARGET_COLUMNS = {
     "risk_adjusted": "target_risk_adjusted",
 }
 ROW_COLUMNS = [
-    "ticker", "date", *FEATURES, *EXTRA_FEATURES, VIX_PERCENTILE, "close", "eligible_pit",
+    "ticker", "date", *FEATURES, *EXTRA_FEATURES,
+    *(name + RANK_SUFFIX for name in RANKED_SOURCES), VIX_PERCENTILE, "close", "eligible_pit",
     "fwd_excess", *TARGET_COLUMNS.values(), "label_end",
 ]
 
@@ -96,6 +97,9 @@ def build_rows(
         return pd.DataFrame(columns=ROW_COLUMNS)
     rows = pd.concat(frames, ignore_index=True)
     rows[TURNOVER_RANK] = rows.groupby("date")["_turnover"].rank(pct=True)
+    eligible = rows["eligible_pit"].astype(bool)
+    ranked = rows[list(RANKED_SOURCES)].where(eligible).groupby(rows["date"]).rank(pct=True)
+    rows = rows.join(ranked.add_suffix(RANK_SUFFIX))
     rows[TARGET_COLUMNS["cs_median"]] = _above_daily_median(rows, rows["fwd_excess"])
     volatility = rows["Volatility_20D"].where(rows["Volatility_20D"] > 0)
     rows[TARGET_COLUMNS["risk_adjusted"]] = _above_daily_median(rows, rows["fwd_excess"] / volatility)

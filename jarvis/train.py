@@ -22,7 +22,7 @@ from jarvis.config import (
     EXAM_SESSIONS, HEALTH_SESSIONS, HORIZON, MIN_TRAIN_ROWS, SIM_SESSIONS,
 )
 from jarvis.dataset import build_rows, prediction_slice, training_slice
-from jarvis.features import FEATURES_V2
+from jarvis.features import FEATURE_SETS
 from jarvis.gate import compare_recipes, drift_check, health_check
 from jarvis.ledger import LEDGER_COLUMNS, build_entries, empty_ledger, mature, read_ledger, record
 from jarvis.macro import REQUIRED_MACRO, load_macro, update_macro
@@ -325,7 +325,7 @@ def structural_variants(champion: Recipe) -> list[Recipe]:
     features help?") before random hyperparameters are tried on top.
     """
     variants = []
-    for features in dict.fromkeys((champion.features, FEATURES_V2)):
+    for features in dict.fromkeys((champion.features, *FEATURE_SETS)):
         for target in TARGET_COLUMNS:
             recipe = Recipe(
                 params=dict(champion.params), features=features,
@@ -337,7 +337,7 @@ def structural_variants(champion: Recipe) -> list[Recipe]:
 
 
 def run_search(
-    data_dir: Path | str, as_of=None, candidates: int = 16, seed: int | None = None,
+    data_dir: Path | str, as_of=None, candidates: int = 18, seed: int | None = None,
     *, download: Downloader | None = yahoo_download,
 ) -> dict:
     """Try random recipes; one may replace the champion only through the exam.

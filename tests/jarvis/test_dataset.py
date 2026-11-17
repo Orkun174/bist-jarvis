@@ -3,7 +3,9 @@ import pandas as pd
 import pytest
 
 from jarvis.dataset import TARGET_COLUMNS, build_rows, prediction_slice, training_slice
-from jarvis.features import EXTRA_FEATURES, FEATURES, LOCAL_FEATURES, VIX_PERCENTILE
+from jarvis.features import (
+    EXTRA_FEATURES, FEATURES, LOCAL_FEATURES, RANKED_FEATURES, VIX_PERCENTILE,
+)
 from jarvis.store import Store
 from tests.jarvis.synthetic import CALENDAR, SESSION, build_market, random_ohlcv
 
@@ -18,7 +20,8 @@ def market(tmp_path_factory):
 
 def test_columns(market):
     rows = market[3]
-    expected = ["ticker", "date", *FEATURES, *EXTRA_FEATURES, VIX_PERCENTILE, "close",
+    ranked = [name for name in RANKED_FEATURES if name not in EXTRA_FEATURES]
+    expected = ["ticker", "date", *FEATURES, *EXTRA_FEATURES, *ranked, VIX_PERCENTILE, "close",
                 "eligible_pit", "fwd_excess", "target", "target_cs_median",
                 "target_risk_adjusted", "label_end"]
     assert list(rows.columns) == expected
@@ -79,7 +82,7 @@ def test_no_lookahead_in_features(tmp_path, market):
     cutoff = CALENDAR[-31]
     left = rows[rows["date"] <= cutoff].reset_index(drop=True)
     right = changed[changed["date"] <= cutoff].reset_index(drop=True)
-    columns = ["ticker", "date", *FEATURES, *EXTRA_FEATURES]
+    columns = ["ticker", "date", *FEATURES, *EXTRA_FEATURES, *RANKED_FEATURES]
     pd.testing.assert_frame_equal(left[columns], right[columns])
 
 
@@ -143,3 +146,12 @@ def test_turnover_rank_is_a_share_within_the_day(market):
     rows = market[3]
     day = rows[rows["date"] == CALENDAR[300]]
     assert day["Turnover_Rank"].between(0, 1).all() and day["Turnover_Rank"].max() == 1.0
+
+
+def test_ranked_features_rank_eligible_stocks_within_the_day(market):
+    rows = market[3]
+    day = rows[rows["date"] == CALENDAR[300]]
+    eligible = day[day["eligible_pit"].astype(bool)]
+    expected = eligible["CMF_20"].rank(pct=True)
+    assert (eligible["CMF_20_Rank"] == expected).all()
+    assert day[~day["eligible_pit"].astype(bool)]["CMF_20_Rank"].isna().all()

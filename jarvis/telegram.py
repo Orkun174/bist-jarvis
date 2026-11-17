@@ -61,6 +61,8 @@ def _thousands(value: int) -> str:
 def _feature_label(feature: str) -> str:
     if feature in FEATURE_LABELS:
         return FEATURE_LABELS[feature]
+    if feature.endswith("_Rank"):  # the day's rank of a known feature reads the same
+        return _feature_label(feature[: -len("_Rank")])
     if feature.startswith("macro_"):
         return MACRO_LABELS.get(feature.split("_")[1], feature)
     return feature
