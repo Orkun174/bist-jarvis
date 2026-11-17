@@ -268,6 +268,52 @@ def indicator_readings(equity: pd.DataFrame, benchmark: pd.Series) -> list[dict]
     return readings
 
 
+# -- news sentiment (optional) -------------------------------------------------
+
+SENTIMENT_MODEL = "savasy/bert-base-turkish-sentiment-cased"   # same checkpoint as live_inference
+SENTIMENT_SIGN = {"LABEL_0": -1.0, "LABEL_1": 1.0, "negative": -1.0, "positive": 1.0}
+_sentiment_pipeline = None
+
+
+def _default_classifier():
+    """The local Turkish BERT classifier, or None when transformers/torch are missing."""
+    global _sentiment_pipeline
+    if _sentiment_pipeline is None:
+        try:
+            from transformers import pipeline
+        except ImportError:
+            return None
+        try:
+            _sentiment_pipeline = pipeline("text-classification", model=SENTIMENT_MODEL,
+                                           device=-1, truncation=True)
+        except Exception:
+            return None
+    return _sentiment_pipeline
+
+
+def news_sentiment(headlines: list[str], classifier: Callable | None = None) -> dict:
+    """Mean headline sentiment in [-1, 1], or a reason why there is none.
+
+    Returns {"status": "scored", "score", "count"} or {"status": "unavailable" |
+    "no_news" | "failed"}. Headlines are matched to the stock by search only, so
+    the score is a hint about the news flow, not about the stock's prospects.
+    """
+    texts = [" ".join(str(text).split())[:600] for text in headlines if str(text).strip()]
+    if not texts:
+        return {"status": "no_news"}
+    classifier = classifier or _default_classifier()
+    if classifier is None:
+        return {"status": "unavailable"}
+    try:
+        outputs = classifier(texts)
+        values = [SENTIMENT_SIGN[item["label"]] * float(item["score"]) for item in outputs]
+    except Exception:
+        return {"status": "failed"}
+    if len(values) != len(texts) or not all(np.isfinite(values)):
+        return {"status": "failed"}
+    return {"status": "scored", "score": float(np.clip(np.mean(values), -1.0, 1.0)), "count": len(values)}
+
+
 # -- scorecard and model history ------------------------------------------------
 
 def model_history(data_dir: Path | str) -> pd.DataFrame:

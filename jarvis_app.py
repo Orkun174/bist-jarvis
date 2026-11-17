@@ -65,6 +65,11 @@ def _fetch_news(ticker: str) -> list[dict]:
     return fetch_news(ticker, limit=5)
 
 
+@st.cache_data(show_spinner="Haber duygusu hesaplanıyor…", ttl=1800)
+def cached_sentiment(titles: tuple[str, ...]) -> dict:
+    return desktop.news_sentiment(list(titles))
+
+
 def news_for(ticker: str) -> list[dict] | None:
     """Headlines, or None when they cannot be fetched (failures are not cached)."""
     if os.environ.get("JARVIS_NO_NEWS"):
@@ -188,7 +193,16 @@ def stock_screen(folder: Path) -> None:
                 day = str(item.get("published_at") or "")[:10]
                 line = f"[{title}]({link})" if link else title
                 st.markdown(f"- {line}" + (f" · {day}" if day else ""))
-            st.caption("Kaynak: Google Haberler. Başlıklar otomatik aranır; ilgisiz olabilir.")
+            mood = cached_sentiment(tuple(item.get("title", "") for item in news))
+            if mood["status"] == "scored":
+                word = "olumlu" if mood["score"] > 0.2 else "olumsuz" if mood["score"] < -0.2 else "nötr"
+                st.markdown(f"**Haber duygusu:** {mood['score']:+.2f} ({word}, {mood['count']} başlık)"
+                            .replace(".", ",", 1))
+            elif mood["status"] == "unavailable":
+                st.caption("Duygu skoru için `transformers` ve `torch` kurulu olmalı.")
+            st.caption("Kaynak: Google Haberler. Başlıklar otomatik aranır; ilgisiz olabilir. "
+                       "Duygu skoru (−1 ile +1) Türkçe BERT modeliyle başlıklardan hesaplanır; "
+                       "öneri değildir.")
 
 
 def scorecard_screen(folder: Path) -> None:
