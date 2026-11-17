@@ -98,6 +98,13 @@ def picks_screen(folder: Path) -> None:
             st.button(label, key=f"pick-{day}-{row.ticker}", on_click=open_stock,
                       args=(row.ticker,), width="stretch")
         st.caption("★ günün önerisi. Hisseye tıklayınca araştırma ekranı açılır.")
+        if len(ranked) > 20:
+            st.subheader("Modelin en zayıf gördükleri")
+            for row in ranked.tail(5).iloc[::-1].itertuples():
+                st.button(f"{row.rank}. {row.ticker}", key=f"last-{day}-{row.ticker}",
+                          on_click=open_stock, args=(row.ticker,), width="stretch")
+            st.caption("Sıralamanın sonundaki hisseler. Simülasyonda modelin en tutarlı olduğu "
+                       "yer burasıydı: en alttakiler ortalamadan belirgin kötü gitti.")
 
 
 def stock_chart(equity: pd.DataFrame, ticker: str) -> go.Figure:
@@ -212,6 +219,14 @@ def scorecard_screen(folder: Path) -> None:
     fifth.metric("Ertesi açılıştan alınsaydı", percent(net.get("mean_top_excess_open")))
     third.metric("Kazanan gün oranı", percent(net.get("hit_rate"), 0, signed=False))
     fourth.metric("Rank IC", f"{net['mean_rank_ic']:.3f}".replace(".", ",") if net.get("mean_rank_ic") is not None else "–")
+    if net.get("mean_universe_excess") is not None:
+        first, second, third = st.columns(3)
+        first.metric("Ortalama uygun hisse", percent(net.get("mean_universe_excess")))
+        second.metric("İlk 5 − ortalama hisse", percent(net.get("mean_top_vs_universe")))
+        third.metric("Son 5", percent(net.get("mean_bottom_excess")))
+        st.caption("Endeks büyük şirket ağırlıklıdır; ortalama uygun hisse aylarca endeksin gerisinde "
+                   "ya da önünde kalabilir. 'İlk 5 − ortalama hisse' modelin kendi katkısını gösterir "
+                   "(maliyet öncesi).")
     st.caption("Maliyet düşülmüş, geçmişe dönük ileriye yürütme; 5 seanslık getiri, endekse göre. "
                "Mesaj kapanıştan sonra geldiği için gerçekte alınabilecek ilk fiyat ertesi açılıştır. "
                "Sıfıra yakın getiri, modelin kazancının kanıtlanmadığı anlamına gelir.")
