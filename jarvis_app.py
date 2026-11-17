@@ -59,11 +59,18 @@ def open_stock(ticker: str) -> None:
     st.session_state["screen"] = SCREENS[1]
 
 
-@st.cache_data(show_spinner=False)
-def cached_news(ticker: str) -> list[dict] | None:
+@st.cache_data(show_spinner=False, ttl=1800)
+def _fetch_news(ticker: str) -> list[dict]:
+    from core.market_data import fetch_news
+    return fetch_news(ticker, limit=5)
+
+
+def news_for(ticker: str) -> list[dict] | None:
+    """Headlines, or None when they cannot be fetched (failures are not cached)."""
+    if os.environ.get("JARVIS_NO_NEWS"):
+        return None
     try:
-        from core.market_data import fetch_news
-        return fetch_news(ticker, limit=5)
+        return _fetch_news(ticker)
     except Exception:
         return None
 
@@ -163,15 +170,18 @@ def stock_screen(folder: Path) -> None:
                    "özetidir, öngörü değildir.")
     with right:
         st.subheader("Haberler")
-        news = cached_news(ticker)
+        news = news_for(ticker)
         if news is None:
-            st.caption("Haberler alınamadı.")
+            st.caption("Haberler şu an alınamadı. Hisseyi yeniden seçince tekrar denenir.")
         elif not news:
             st.caption("Güncel haber bulunamadı.")
         else:
             for item in news:
-                title, link = item.get("title", ""), item.get("link") or item.get("url")
-                st.markdown(f"- [{title}]({link})" if link else f"- {title}")
+                title, link = item.get("title", ""), item.get("url") or item.get("link")
+                day = str(item.get("published_at") or "")[:10]
+                line = f"[{title}]({link})" if link else title
+                st.markdown(f"- {line}" + (f" · {day}" if day else ""))
+            st.caption("Kaynak: Google Haberler. Başlıklar otomatik aranır; ilgisiz olabilir.")
 
 
 def scorecard_screen(folder: Path) -> None:
@@ -183,9 +193,9 @@ def scorecard_screen(folder: Path) -> None:
     columns = st.columns(3)
     for column, (key, title) in zip(columns, (("20", "Son 20 seans"), ("60", "Son 60 seans"), ("all", "Tümü"))):
         window = live.get(key) or {}
-        column.metric(title, f"{window.get('recommendations', 0)} öneri",
-                      f"isabet {percent(window.get('hit_rate'), 0, signed=False)} · fazla getiri {percent(window.get('mean_excess'))}",
-                      delta_color="off")
+        column.metric(title, f"{window.get('recommendations', 0)} öneri")
+        column.caption(f"isabet {percent(window.get('hit_rate'), 0, signed=False)} · "
+                       f"ort. fazla getiri {percent(window.get('mean_excess'))}")
     graded = desktop.graded_recommendations(folder)
     if graded.empty:
         st.caption("Henüz notlanan öneri yok. Öneriler 5 işlem günü sonra notlanır.")
@@ -196,13 +206,15 @@ def scorecard_screen(folder: Path) -> None:
 
     st.subheader("Simülasyon (gerçek işlem değildir)")
     net = simulated.get("top5_net_of_cost") or {}
-    first, second, third, fourth = st.columns(4)
+    first, second, third, fourth, fifth = st.columns(5)
     first.metric("Seans", net.get("days", "–"))
     second.metric("İlk 5 ort. fazla getiri", percent(net.get("mean_top_excess")))
+    fifth.metric("Ertesi açılıştan alınsaydı", percent(net.get("mean_top_excess_open")))
     third.metric("Kazanan gün oranı", percent(net.get("hit_rate"), 0, signed=False))
     fourth.metric("Rank IC", f"{net['mean_rank_ic']:.3f}".replace(".", ",") if net.get("mean_rank_ic") is not None else "–")
-    st.caption("Maliyet düşülmüş, geçmişe dönük ileriye yürütme. Sıfıra yakın getiri, modelin "
-               "kazancının kanıtlanmadığı anlamına gelir.")
+    st.caption("Maliyet düşülmüş, geçmişe dönük ileriye yürütme; 5 seanslık getiri, endekse göre. "
+               "Mesaj kapanıştan sonra geldiği için gerçekte alınabilecek ilk fiyat ertesi açılıştır. "
+               "Sıfıra yakın getiri, modelin kazancının kanıtlanmadığı anlamına gelir.")
 
     st.subheader("Model geçmişi")
     history = desktop.model_history(folder)

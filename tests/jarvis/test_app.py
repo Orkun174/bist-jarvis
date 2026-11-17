@@ -15,7 +15,7 @@ APP = str(Path(__file__).resolve().parents[2] / "jarvis_app.py")
 def test_three_screens_render_and_a_pick_opens_its_stock(data, monkeypatch):  # noqa: F811
     root, names, _ = data
     monkeypatch.setenv("JARVIS_DATA_DIR", str(root))
-    monkeypatch.setattr("jarvis_app.cached_news", lambda ticker: [], raising=False)
+    monkeypatch.setenv("JARVIS_NO_NEWS", "1")  # no network in tests
     app = AppTest.from_file(APP, default_timeout=120).run()
     assert not app.exception
     assert f"1. {names[0]}" in app.text[0].value
