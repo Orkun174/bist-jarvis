@@ -223,3 +223,32 @@ def test_search_tries_structural_variants_first(tmp_path, monkeypatch):
     promoted = Recipe.from_dict(json.loads((tmp_path / "models" / "recipe.json").read_text(encoding="utf-8")))
     assert promoted.recipe_id == result["challenger_recipe_id"]
     assert daily(tmp_path)["status"] == "ok"  # the promoted recipe trains and predicts
+
+
+def test_compare_reports_periods_and_a_shuffled_control(tmp_path):
+    from jarvis.compare import compare, recipe_from_exam, shuffled_labels
+    from jarvis.train import _prepare
+
+    prepare(tmp_path)
+    _, _, _, _, calendar, rows, _ = _prepare(tmp_path, AS_OF, None)
+    challenger = Recipe(params=dict(SMALL.params), features=FEATURES, target="cs_median")
+
+    shuffled = shuffled_labels(rows, "target_cs_median")
+    assert not shuffled["target_cs_median"].equals(rows["target_cs_median"])
+    by_day = lambda frame: frame.groupby("date")["target_cs_median"].sum()
+    pd.testing.assert_series_equal(by_day(shuffled), by_day(rows))  # only moved within the day
+
+    result = compare(rows, calendar, SMALL, challenger, sessions=30)
+    assert set(result["periods"]) == {"earlier", "selection", "exam"}
+    assert set(result["overall"]) == {"champion", "challenger", "challenger_shuffled"}
+    assert result["overall"]["champion"]["days"] > 0
+    # 30 sessions, the last 5 still ungraded: all 25 fall inside the 60-session exam window.
+    assert result["periods"]["exam"]["champion"]["days"] == 25
+    assert result["periods"]["earlier"]["champion"]["days"] == 0
+
+    exam = tmp_path / "exam.json"
+    exam.write_text(json.dumps({"challenger_recipe_id": challenger.recipe_id, "trials": [
+        {"params": challenger.params, "target": "cs_median"}]}), encoding="utf-8")
+    assert recipe_from_exam(exam) == challenger
+    with pytest.raises(ValueError):
+        recipe_from_exam(exam, "missing")

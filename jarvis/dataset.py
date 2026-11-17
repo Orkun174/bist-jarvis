@@ -10,6 +10,10 @@ yes/no targets derived from it (TARGET_COLUMNS):
                  features cannot predict.
 - risk_adjusted: the same question after dividing by the stock's recent
                  volatility, so a volatile stock is not rewarded for moving more.
+
+`fwd_excess_open` is the same outcome measured from the next session's open,
+which is the first price anyone can trade at after the evening message. It is
+reported next to `fwd_excess`; no target is built from it.
 """
 
 from __future__ import annotations
@@ -35,7 +39,7 @@ TARGET_COLUMNS = {
 ROW_COLUMNS = [
     "ticker", "date", *FEATURES, *EXTRA_FEATURES,
     *(name + RANK_SUFFIX for name in RANKED_SOURCES), VIX_PERCENTILE, "close", "eligible_pit",
-    "fwd_excess", *TARGET_COLUMNS.values(), "label_end",
+    "fwd_excess", "fwd_excess_open", *TARGET_COLUMNS.values(), "label_end",
 ]
 
 
@@ -66,6 +70,7 @@ def build_rows(
     # the benchmark's forward return over the horizon.
     label_end = pd.Series(calendar, index=calendar).shift(-HORIZON)
     benchmark_forward = benchmark["Close"].shift(-HORIZON) / benchmark["Close"] - 1.0
+    benchmark_forward_open = benchmark["Close"].shift(-HORIZON) / benchmark["Open"].shift(-1) - 1.0
 
     frames = []
     for ticker in tickers:
@@ -86,6 +91,9 @@ def build_rows(
         frame["close"] = equity["Close"]
         frame["eligible_pit"] = eligibility["eligible_pit"].to_numpy()
         frame["fwd_excess"] = excess
+        open_on_calendar = equity["Open"].reindex(calendar)
+        stock_forward_open = close_on_calendar.shift(-HORIZON) / open_on_calendar.shift(-1) - 1.0
+        frame["fwd_excess_open"] = (stock_forward_open - benchmark_forward_open).reindex(equity.index)
         frame["target"] = np.where(excess.isna(), np.nan, (excess > 0).astype(float))
         frame["label_end"] = label_end.reindex(equity.index).where(excess.notna())
         frame = frame.dropna(subset=list(LOCAL_FEATURES))

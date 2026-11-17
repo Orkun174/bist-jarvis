@@ -15,6 +15,7 @@ from jarvis.features import VIX_PERCENTILE
 from jarvis.model import Recipe, fit, predict, trainable
 
 COLUMNS = ["date", "ticker", "prob", "fwd_excess", VIX_PERCENTILE]
+OPTIONAL = ["fwd_excess_open"]  # carried along when the rows have it
 
 
 def walk_forward(
@@ -28,6 +29,7 @@ def walk_forward(
     """Out-of-sample predictions for eligible rows on every session in [start, end]."""
     sessions = calendar[(calendar >= pd.Timestamp(start)) & (calendar <= pd.Timestamp(end))]
     eligible = rows[rows["eligible_pit"].astype(bool)]
+    columns = COLUMNS + [name for name in OPTIONAL if name in rows.columns]
     pieces = []
     for offset in range(0, len(sessions), refit_every):
         block = sessions[offset:offset + refit_every]
@@ -38,9 +40,9 @@ def walk_forward(
         today = eligible[eligible["date"].isin(block)]
         if today.empty:
             continue
-        piece = today[["date", "ticker", "fwd_excess", VIX_PERCENTILE]].copy()
+        piece = today[[name for name in columns if name != "prob"]].copy()
         piece["prob"] = predict(model, recipe, today)
-        pieces.append(piece[COLUMNS])
+        pieces.append(piece[columns])
     if not pieces:
-        return pd.DataFrame(columns=COLUMNS)
+        return pd.DataFrame(columns=columns)
     return pd.concat(pieces, ignore_index=True).sort_values(["date", "ticker"], ignore_index=True)

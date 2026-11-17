@@ -25,7 +25,7 @@ def small_minimum(monkeypatch):
 def test_walk_forward_predicts_every_eligible_row_in_range(rows):
     start, end = CALENDAR[-25], CALENDAR[-6]
     result = walk_forward(rows, RECIPE, CALENDAR, start, end)
-    assert list(result.columns) == ["date", "ticker", "prob", "fwd_excess", "VIX_Percentile"]
+    assert list(result.columns) == ["date", "ticker", "prob", "fwd_excess", "VIX_Percentile", "fwd_excess_open"]
     assert result["date"].min() == start and result["date"].max() == end
     expected = rows[(rows["date"] >= start) & (rows["date"] <= end) & rows["eligible_pit"]]
     assert len(result) == len(expected)
@@ -65,7 +65,7 @@ def test_walk_forward_skips_when_too_few_rows(rows, monkeypatch):
     monkeypatch.setattr(walkforward, "MIN_TRAIN_ROWS", 10**9)
     result = walk_forward(rows, RECIPE, CALENDAR, CALENDAR[-25], CALENDAR[-6])
     assert result.empty
-    assert list(result.columns) == ["date", "ticker", "prob", "fwd_excess", "VIX_Percentile"]
+    assert list(result.columns) == ["date", "ticker", "prob", "fwd_excess", "VIX_Percentile", "fwd_excess_open"]
 
 
 def test_walk_forward_is_deterministic(rows):

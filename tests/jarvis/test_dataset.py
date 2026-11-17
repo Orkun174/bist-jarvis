@@ -22,7 +22,7 @@ def test_columns(market):
     rows = market[3]
     ranked = [name for name in RANKED_FEATURES if name not in EXTRA_FEATURES]
     expected = ["ticker", "date", *FEATURES, *EXTRA_FEATURES, *ranked, VIX_PERCENTILE, "close",
-                "eligible_pit", "fwd_excess", "target", "target_cs_median",
+                "eligible_pit", "fwd_excess", "fwd_excess_open", "target", "target_cs_median",
                 "target_risk_adjusted", "label_end"]
     assert list(rows.columns) == expected
     assert rows[list(LOCAL_FEATURES)].notna().all().all()
@@ -155,3 +155,14 @@ def test_ranked_features_rank_eligible_stocks_within_the_day(market):
     expected = eligible["CMF_20"].rank(pct=True)
     assert (eligible["CMF_20_Rank"] == expected).all()
     assert day[~day["eligible_pit"].astype(bool)]["CMF_20_Rank"].isna().all()
+
+
+def test_outcome_from_next_open_is_what_a_buyer_after_the_message_gets(market):
+    store, names, macros, rows = market
+    day, entry, later = CALENDAR[300], CALENDAR[301], CALENDAR[305]
+    stock, index = store.read_prices("S01"), macros["BIST100"]
+    expected = (stock["Close"][later] / stock["Open"][entry] - 1.0) - (
+        index["Close"][later] / index["Open"][entry] - 1.0)
+    row = rows[(rows["ticker"] == "S01") & (rows["date"] == day)].iloc[0]
+    assert row["fwd_excess_open"] == pytest.approx(expected)
+    assert rows[rows["date"] > CALENDAR[-6]]["fwd_excess_open"].isna().all()

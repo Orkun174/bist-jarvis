@@ -23,8 +23,13 @@ def _rank_ic(group: pd.DataFrame) -> float:
 def daily_scores(
     predictions: pd.DataFrame, top_n: int = TOP_N, cost_bps: float = COST_BPS
 ) -> pd.DataFrame:
-    """Per day: mean excess return of the top picks (net of cost) and rank IC."""
+    """Per day: mean excess return of the top picks (net of cost) and rank IC.
+
+    When the predictions carry `fwd_excess_open`, `top_excess_open` is the same
+    top-pick return measured from the next session's open.
+    """
     labelled = predictions.dropna(subset=["fwd_excess", "prob"])
+    from_open = "fwd_excess_open" in predictions.columns
     records = {}
     for day, group in labelled.groupby("date", sort=True):
         ordered = group.sort_values(["prob", "ticker"], ascending=[False, True])
@@ -34,9 +39,12 @@ def daily_scores(
             "rank_ic": _rank_ic(group),
             "n": len(group),
         }
+        if from_open:
+            records[day]["top_excess_open"] = float(top["fwd_excess_open"].mean()) - cost_bps / 10_000.0
+    columns = SCORE_COLUMNS + (["top_excess_open"] if from_open else [])
     if not records:
-        return pd.DataFrame(columns=SCORE_COLUMNS, index=pd.DatetimeIndex([], name="date"))
-    scores = pd.DataFrame.from_dict(records, orient="index")[SCORE_COLUMNS]
+        return pd.DataFrame(columns=columns, index=pd.DatetimeIndex([], name="date"))
+    scores = pd.DataFrame.from_dict(records, orient="index")[columns]
     scores.index.name = "date"
     return scores
 
@@ -49,9 +57,14 @@ def _mean(series: pd.Series) -> float | None:
 def summarize(scores: pd.DataFrame) -> dict:
     if scores.empty:
         return {"days": 0, "mean_top_excess": None, "mean_rank_ic": None, "hit_rate": None}
-    return {
+    summary = {
         "days": int(len(scores)),
         "mean_top_excess": _mean(scores["top_excess"]),
         "mean_rank_ic": _mean(scores["rank_ic"]),
         "hit_rate": float((scores["top_excess"] > 0).mean()),
     }
+    if "top_excess_open" in scores.columns:
+        from_open = scores["top_excess_open"].dropna()
+        summary["mean_top_excess_open"] = _mean(from_open)
+        summary["hit_rate_open"] = float((from_open > 0).mean()) if len(from_open) else None
+    return summary
