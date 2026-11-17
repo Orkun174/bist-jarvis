@@ -39,6 +39,8 @@ from jarvis.walkforward import walk_forward
 LOG = logging.getLogger("jarvis.train")
 SIMULATED_TABLE = "ledger/simulated"
 VIX_MAX_AGE = pd.Timedelta(days=7)
+BOTTOM_N = 5
+MIN_NAMES_FOR_BOTTOM = 20
 
 
 # -- shared loading ---------------------------------------------------------
@@ -188,6 +190,7 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
 
     recommendations: list[dict] = []
     top: list[dict] = []
+    bottom: list[dict] = []
     if active is not None and not today_rows.empty:
         model, active_recipe, meta = active
         predictions = pd.DataFrame(
@@ -219,6 +222,10 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
             for item, reasons in zip(recommendations, explained):
                 item["reasons"] = reasons
         top = [as_item(row) for row in todays.head(10).itertuples()]
+        # The lowest ranks, worst first: in simulation this end of the ranking was
+        # the model's most reliable. Only with a healthy model and a real ranking.
+        if checks["health"]["ok"] and len(todays) >= MIN_NAMES_FOR_BOTTOM:
+            bottom = [as_item(row) for row in todays.tail(BOTTOM_N).iloc[::-1].itertuples()]
 
     model_info = {
         "model_id": active[2].get("model_id") if active else None,
@@ -234,6 +241,7 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
                 "session": day,
                 "recommendations": recommendations,
                 "top": top,
+                "bottom": bottom,
                 "eligible": len(today_rows),
                 "model": model_info,
                 "scorecard_live": live_card["windows"]["60"],

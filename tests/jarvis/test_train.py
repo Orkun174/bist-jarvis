@@ -258,3 +258,22 @@ def test_compare_reports_periods_and_a_shuffled_control(tmp_path):
     assert recipe_from_exam(exam) == challenger
     with pytest.raises(ValueError):
         recipe_from_exam(exam, "missing")
+
+
+def test_daily_result_carries_the_bottom_of_a_large_enough_ranking(tmp_path, monkeypatch):
+    prepare(tmp_path, tickers=24)
+    monkeypatch.setattr(train_module, "health_check", lambda scores: {"ok": True})
+    assert daily(tmp_path)["status"] == "ok"
+    result = json.loads((tmp_path / "daily" / "2026-11-13.json").read_text(encoding="utf-8"))
+    ledger = read_ledger(Store(tmp_path))
+    worst_first = list(ledger.sort_values("rank", ascending=False)["ticker"].head(5))
+    assert [item["ticker"] for item in result["bottom"]] == worst_first
+    assert not set(worst_first) & {item["ticker"] for item in result["recommendations"]}
+
+
+def test_no_bottom_list_for_a_small_ranking(tmp_path, monkeypatch):
+    prepare(tmp_path, tickers=12)
+    monkeypatch.setattr(train_module, "health_check", lambda scores: {"ok": True})
+    daily(tmp_path)
+    result = json.loads((tmp_path / "daily" / "2026-11-13.json").read_text(encoding="utf-8"))
+    assert result["bottom"] == []

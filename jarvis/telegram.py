@@ -171,6 +171,9 @@ def format_message(
             reasons = _reasons(item)
             lines.append(f"{item['rank']}. {item['ticker']}" + (f" — {reasons}" if reasons else ""))
         lines.append("(lehine/aleyhine: modelin sıralamasını en çok etkileyen etkenler)")
+        bottom = [item["ticker"] for item in daily.get("bottom") or []]
+        if bottom:
+            lines += ["", "Sıralamanın sonu (modelin en zayıf gördükleri): " + ", ".join(bottom)]
     elif health.get("ok") is False:
         lines.append("Bugün öneri yok: model sağlık kontrolünü geçemedi.")
     else:

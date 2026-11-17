@@ -214,3 +214,10 @@ def test_ranked_feature_reads_like_the_feature_it_ranks():
     assert _feature_label("CMF_20_Rank") == _feature_label("CMF_20")
     assert _feature_label("Rel_Return_60D_Rank") == "endekse göre 3 aylık getiri"
     assert _feature_label("Turnover_Rank") == "işlem hacmi sırası"
+
+
+def test_message_lists_the_bottom_of_the_ranking_when_present():
+    daily = {**DAILY, "bottom": [{"ticker": "ZZZ", "rank": 89}, {"ticker": "YYY", "rank": 88}]}
+    text = format_message(daily, QUALITY, LIVE_EMPTY, SIMULATED)
+    assert "Sıralamanın sonu (modelin en zayıf gördükleri): ZZZ, YYY" in text
+    assert "Sıralamanın sonu" not in format_message(DAILY, QUALITY, LIVE_EMPTY, SIMULATED)
