@@ -167,3 +167,37 @@ def test_reference_stops_at_deadline():
     tickers = [f"T{i:03d}" for i in range(50)]
     closes = isyatirim_closes(tickers, SESSION, fetch_one=fetch_one, budget_seconds=0.0)
     assert len(closes) < 50
+
+
+def test_reference_retries_failed_requests_once():
+    calls: dict[str, int] = {}
+
+    def fetch_one(ticker, session):
+        calls[ticker] = calls.get(ticker, 0) + 1
+        if ticker in {"T010", "T020"} and calls[ticker] == 1:
+            raise TimeoutError("slow")       # first attempt times out, second works
+        if ticker == "T030":
+            raise ConnectionError("down")    # fails twice: given up
+        if ticker == "T040":
+            return None                      # not published: never retried
+        return 100.0
+
+    tickers = [f"T{i:03d}" for i in range(50)]
+    closes = isyatirim_closes(tickers, SESSION, fetch_one=fetch_one)
+    assert "T010" in closes and "T020" in closes
+    assert "T030" not in closes and calls["T030"] == 2
+    assert "T040" not in closes and calls["T040"] == 1
+    assert len(closes) == 48
+
+
+def test_reference_retries_a_probe_that_only_errored():
+    calls = {"n": 0}
+
+    def fetch_one(ticker, session):
+        calls["n"] += 1
+        if calls["n"] <= 3:
+            raise TimeoutError("cold start")
+        return 100.0
+
+    closes = isyatirim_closes([f"T{i:03d}" for i in range(10)], SESSION, fetch_one=fetch_one)
+    assert len(closes) == 10
