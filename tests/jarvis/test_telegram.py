@@ -221,3 +221,10 @@ def test_message_lists_the_bottom_of_the_ranking_when_present():
     text = format_message(daily, QUALITY, LIVE_EMPTY, SIMULATED)
     assert "Sıralamanın sonu (modelin en zayıf gördükleri): ZZZ, YYY" in text
     assert "Sıralamanın sonu" not in format_message(DAILY, QUALITY, LIVE_EMPTY, SIMULATED)
+
+
+def test_unproven_line_adds_the_quintile_spread_when_known():
+    simulated = {"top5_net_of_cost": {**SIMULATED["top5_net_of_cost"], "mean_quintile_spread": 0.0095}}
+    text = format_message(DAILY, QUALITY, LIVE_EMPTY, simulated)
+    assert "en kötü beşte birliği ortalama %+0,95 geçti" in text
+    assert "beşte bir" not in format_message(DAILY, QUALITY, LIVE_EMPTY, SIMULATED)

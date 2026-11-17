@@ -98,6 +98,8 @@
       "mean_universe_excess": -0.00494457651727322,
       "mean_top_vs_universe": 0.0063879278189144,
       "mean_bottom_excess": -0.01880397268019366,
+      "mean_quintile_spread": 0.009543008180539918,
+      "quintile_spread_win_rate": 0.7183673469387755,
       "mean_top_excess_open": -0.0014283013488292392,
       "hit_rate_open": 0.43673469387755104
     },
@@ -109,6 +111,8 @@
       "mean_universe_excess": -0.00494457651727322,
       "mean_top_vs_universe": 0.004671635657915287,
       "mean_bottom_excess": -0.026314105596622655,
+      "mean_quintile_spread": 0.012885114854880685,
+      "quintile_spread_win_rate": 0.710204081632653,
       "mean_top_excess_open": -0.002522421803000766,
       "hit_rate_open": 0.4489795918367347
     },
@@ -120,6 +124,8 @@
       "mean_universe_excess": -0.00494457651727322,
       "mean_top_vs_universe": -0.005337148517391033,
       "mean_bottom_excess": 0.0023252734185591553,
+      "mean_quintile_spread": -0.004805689204671336,
+      "quintile_spread_win_rate": 0.4122448979591837,
       "mean_top_excess_open": -0.012863484783330157,
       "hit_rate_open": 0.34285714285714286
     }
@@ -142,6 +148,8 @@
         "mean_universe_excess": -0.003563427249431792,
         "mean_top_vs_universe": 0.003330922155010396,
         "mean_bottom_excess": -0.01653651102750651,
+        "mean_quintile_spread": 0.007125047437532663,
+        "quintile_spread_win_rate": 0.712,
         "mean_top_excess_open": -0.002743358014458258,
         "hit_rate_open": 0.4
       },
@@ -153,6 +161,8 @@
         "mean_universe_excess": -0.003563427249431792,
         "mean_top_vs_universe": 0.0008428496139168591,
         "mean_bottom_excess": -0.023549030005169207,
+        "mean_quintile_spread": 0.007541095094044292,
+        "quintile_spread_win_rate": 0.68,
         "mean_top_excess_open": -0.0045347008938298695,
         "hit_rate_open": 0.408
       },
@@ -174,6 +184,8 @@
         "mean_universe_excess": -0.005503051113005025,
         "mean_top_vs_universe": 0.01055312100188649,
         "mean_bottom_excess": -0.01654840109082042,
+        "mean_quintile_spread": 0.009649952988143544,
+        "quintile_spread_win_rate": 0.6833333333333333,
         "mean_top_excess_open": 0.002171997056018,
         "hit_rate_open": 0.5166666666666667
       },
@@ -185,6 +197,8 @@
         "mean_universe_excess": -0.005503051113005025,
         "mean_top_vs_universe": 0.0036379059945781623,
         "mean_bottom_excess": -0.024164251432789226,
+        "mean_quintile_spread": 0.005957355496832804,
+        "quintile_spread_win_rate": 0.65,
         "mean_top_excess_open": -0.003881875532885432,
         "hit_rate_open": 0.4
       },
@@ -206,6 +220,8 @@
         "mean_universe_excess": -0.0072634962295443925,
         "mean_top_vs_universe": 0.008591496435742313,
         "mean_bottom_excess": -0.025783422712665146,
+        "mean_quintile_spread": 0.014473481587534743,
+        "quintile_spread_win_rate": 0.7666666666666667,
         "mean_top_excess_open": -0.002288898366949357,
         "hit_rate_open": 0.43333333333333335
       },
@@ -217,6 +233,8 @@
         "mean_universe_excess": -0.0072634962295443925,
         "mean_top_vs_universe": 0.013682002912915802,
         "mean_bottom_excess": -0.03422453390931744,
+        "mean_quintile_spread": 0.030946248714671054,
+        "quintile_spread_win_rate": 0.8333333333333334,
         "mean_top_excess_open": 0.0030292800327778634,
         "hit_rate_open": 0.5833333333333334
       },

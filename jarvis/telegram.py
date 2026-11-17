@@ -90,12 +90,18 @@ def _mark(check: dict | None) -> str:
 def _unproven_line(simulated: dict | None) -> str:
     net = (simulated or {}).get("top5_net_of_cost") or {}
     if net.get("days") and net.get("mean_top_excess") is not None:
-        return (
+        text = (
             "⚠️ Model henüz kanıtlanmadı. Simülasyonda ilk 5 seçim "
             f"{net['days']} seans boyunca 5 günde endekse göre ortalama "
             f"{_percent(net['mean_top_excess'])} getirdi (maliyet düşülmüş); "
             f"kazanan gün oranı {_percent(net['hit_rate'], 0, signed=False)}."
         )
+        if net.get("mean_quintile_spread") is not None:
+            text += (
+                " Sıralamanın geneli daha tutarlı: en iyi beşte birlik dilim, en kötü "
+                f"beşte birliği ortalama {_percent(net['mean_quintile_spread'])} geçti."
+            )
+        return text
     return "⚠️ Model henüz kanıtlanmadı; canlı karne birikene kadar bu sıralama deneme amaçlıdır."
 
 
