@@ -224,6 +224,11 @@ def scorecard_screen(folder: Path) -> None:
         first.metric("Ortalama uygun hisse", percent(net.get("mean_universe_excess")))
         second.metric("İlk 5 − ortalama hisse", percent(net.get("mean_top_vs_universe")))
         third.metric("Son 5", percent(net.get("mean_bottom_excess")))
+        if net.get("mean_quintile_spread") is not None:
+            st.metric("En iyi beşte bir − en kötü beşte bir", percent(net.get("mean_quintile_spread")))
+            st.caption("Sıralamanın işe yarayıp yaramadığının en az gürültülü ölçüsü: çok sayıda "
+                       f"hisseye dayanır. Günlerin {percent(net.get('quintile_spread_win_rate'), 0, signed=False)}"
+                       " kadarında artı.")
         st.caption("Endeks büyük şirket ağırlıklıdır; ortalama uygun hisse aylarca endeksin gerisinde "
                    "ya da önünde kalabilir. 'İlk 5 − ortalama hisse' modelin kendi katkısını gösterir "
                    "(maliyet öncesi).")
