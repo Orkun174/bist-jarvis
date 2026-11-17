@@ -65,6 +65,11 @@ def _fetch_news(ticker: str) -> list[dict]:
     return fetch_news(ticker, limit=5)
 
 
+@st.cache_data(show_spinner="Haber duygusu hesaplanıyor…", ttl=1800)
+def cached_sentiment(titles: tuple[str, ...]) -> dict:
+    return desktop.news_sentiment(list(titles))
+
+
 def news_for(ticker: str) -> list[dict] | None:
     """Headlines, or None when they cannot be fetched (failures are not cached)."""
     if os.environ.get("JARVIS_NO_NEWS"):
@@ -188,7 +193,16 @@ def stock_screen(folder: Path) -> None:
                 day = str(item.get("published_at") or "")[:10]
                 line = f"[{title}]({link})" if link else title
                 st.markdown(f"- {line}" + (f" · {day}" if day else ""))
-            st.caption("Kaynak: Google Haberler. Başlıklar otomatik aranır; ilgisiz olabilir.")
+            mood = cached_sentiment(tuple(item.get("title", "") for item in news))
+            if mood["status"] == "scored":
+                word = "olumlu" if mood["score"] > 0.2 else "olumsuz" if mood["score"] < -0.2 else "nötr"
+                st.markdown(f"**Haber duygusu:** {mood['score']:+.2f} ({word}, {mood['count']} başlık)"
+                            .replace(".", ",", 1))
+            elif mood["status"] == "unavailable":
+                st.caption("Duygu skoru için `transformers` ve `torch` kurulu olmalı.")
+            st.caption("Kaynak: Google Haberler. Başlıklar otomatik aranır; ilgisiz olabilir. "
+                       "Duygu skoru (−1 ile +1) Türkçe BERT modeliyle başlıklardan hesaplanır; "
+                       "öneri değildir.")
 
 
 def scorecard_screen(folder: Path) -> None:
@@ -276,10 +290,16 @@ def scorecard_screen(folder: Path) -> None:
 
 # -- page --------------------------------------------------------------------
 
+@st.cache_resource(show_spinner=False)
+def synced(folder_text: str) -> dict:
+    """Download once per app process, not once per browser tab or session."""
+    return desktop.sync_data(Path(folder_text))
+
+
 folder, downloadable = data_dir()
-if downloadable and "sync" not in st.session_state:
+if downloadable:
     with st.spinner("Güncel veri indiriliyor…"):
-        st.session_state["sync"] = desktop.sync_data(folder)
+        st.session_state["sync"] = synced(str(folder))
 
 st.title("BIST Jarvis")
 sync = st.session_state.get("sync")
@@ -287,12 +307,12 @@ header, refresh = st.columns([5, 1])
 if not downloadable:
     header.caption(f"Yerel klasör okunuyor: {folder}")
 elif sync and sync["ok"]:
-    header.caption("Veri güncel (bu açılışta indirildi).")
+    header.caption(f"Veri güncel (indirildi: {sync['synced_at']} UTC).")
 elif sync and sync["has_local"]:
     header.warning(f"Güncel veri indirilemedi ({sync['error']}). Son yerel kopya gösteriliyor"
                    + (f": {sync['synced_at']}" if sync.get("synced_at") else "."))
 if downloadable and refresh.button("Veriyi yenile"):
-    st.session_state.pop("sync", None)
+    synced.clear()
     st.cache_data.clear()
     st.rerun()
 

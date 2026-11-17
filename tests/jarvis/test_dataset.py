@@ -142,10 +142,12 @@ def test_alternative_targets_are_unknown_where_the_outcome_is(market):
         assert tail[column].isna().all()
 
 
-def test_turnover_rank_is_a_share_within_the_day(market):
+def test_turnover_rank_is_a_share_within_the_days_eligible_stocks(market):
     rows = market[3]
     day = rows[rows["date"] == CALENDAR[300]]
-    assert day["Turnover_Rank"].between(0, 1).all() and day["Turnover_Rank"].max() == 1.0
+    eligible = day[day["eligible_pit"].astype(bool)]
+    assert eligible["Turnover_Rank"].between(0, 1).all() and eligible["Turnover_Rank"].max() == 1.0
+    assert day[~day["eligible_pit"].astype(bool)]["Turnover_Rank"].isna().all()
 
 
 def test_ranked_features_rank_eligible_stocks_within_the_day(market):

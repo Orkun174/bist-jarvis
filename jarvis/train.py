@@ -22,7 +22,7 @@ from jarvis.config import (
     EXAM_SESSIONS, HEALTH_SESSIONS, HORIZON, MIN_TRAIN_ROWS, SIM_SESSIONS,
 )
 from jarvis.dataset import build_rows, prediction_slice, training_slice
-from jarvis.features import FEATURE_SETS
+from jarvis.features import FEATURE_SETS, feature_set_name
 from jarvis.gate import compare_recipes, confirm_recipes, drift_check, health_check
 from jarvis.ledger import LEDGER_COLUMNS, build_entries, empty_ledger, mature, read_ledger, record
 from jarvis.macro import REQUIRED_MACRO, load_macro, update_macro
@@ -355,7 +355,7 @@ def run_search(
     The best candidate is *chosen* on an earlier 60-session window and then
     *examined* against the champion on the most recent 60 sessions, which
     played no part in choosing it. A challenger that passes is promoted only
-    if the last SIM_SESSIONS sessions confirm it (gate.confirm_recipes).
+    if the sessions before both windows confirm it (gate.confirm_recipes).
 
     It is chosen by rank IC, not by the return of its top picks: the top-pick
     return of 60 days is mostly noise, while rank IC uses every stock every
@@ -387,11 +387,12 @@ def run_search(
         summary = summarize(score(recipe, selection))
         trials.append({
             "recipe_id": recipe.recipe_id, "params": recipe.params, "target": recipe.target,
-            "features": len(recipe.features), "selection": summary,
+            "features": len(recipe.features), "feature_set": feature_set_name(recipe.features),
+            "train_years": recipe.train_years, "selection": summary,
         })
         value = summary["mean_rank_ic"]
-        LOG.info("Aday %d/%d (%s, %d özellik): seçim penceresi rank IC %s",
-                 number + 1, candidates, recipe.target, len(recipe.features), value)
+        LOG.info("Aday %d/%d (%s, %s): seçim penceresi rank IC %s",
+                 number + 1, candidates, recipe.target, feature_set_name(recipe.features), value)
         if value is not None and (best is None or value > best[0]):
             best = (value, recipe)
 
@@ -410,10 +411,16 @@ def run_search(
             }
         )
         if verdict["promote"]:
-            # The exam can be passed by luck; ask the long window before promoting.
-            long_start = calendar[max(len(calendar) - SIM_SESSIONS, 0)]
-            long_window = (long_start, session)
-            confirmation = confirm_recipes(score(champion, long_window), score(challenger, long_window))
+            # The exam can be passed by luck; ask sessions that played no part in
+            # choosing or examining the challenger (the ones before both windows).
+            earlier = _graded_window(
+                calendar, max(SIM_SESSIONS - 2 * EXAM_SESSIONS, EXAM_SESSIONS), skip=2 * EXAM_SESSIONS
+            )
+            if earlier is None:
+                confirmation = {"ok": False, "reason": "no_earlier_sessions"}
+            else:
+                confirmation = confirm_recipes(score(champion, earlier), score(challenger, earlier))
+                confirmation["window"] = [earlier[0].date().isoformat(), earlier[1].date().isoformat()]
             result["confirmation"] = confirmation
         if verdict["promote"] and confirmation["ok"]:
             path = data_dir / "models" / "recipe.json"

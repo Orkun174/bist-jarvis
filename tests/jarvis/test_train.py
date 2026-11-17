@@ -195,7 +195,11 @@ def test_search_promotes_only_through_gate(tmp_path, monkeypatch):
     monkeypatch.setattr(train_module, "compare_recipes", lambda a, b: {"promote": True, "days": 10})
     monkeypatch.setattr(train_module, "confirm_recipes", lambda a, b: {"ok": False, "days": 15})
     result = run_search(tmp_path, AS_OF, candidates=2, download=None)
-    assert result["promoted"] is False and result["confirmation"] == {"ok": False, "days": 15}
+    assert result["promoted"] is False and result["confirmation"]["ok"] is False
+    # Confirmed on the sessions before the selection and exam windows (2 x 10, patched),
+    # whose last graded session is HORIZON sessions before today.
+    expected = [CALENDAR[-6 - 20 - 9].date().isoformat(), CALENDAR[-6 - 20].date().isoformat()]
+    assert result["confirmation"]["window"] == expected
     assert recipe_path.read_text(encoding="utf-8") == before  # the long window said no
     monkeypatch.setattr(train_module, "confirm_recipes", lambda a, b: {"ok": True, "days": 15})
     result = run_search(tmp_path, AS_OF, candidates=2, download=None)

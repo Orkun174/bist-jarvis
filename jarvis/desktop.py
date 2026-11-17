@@ -18,6 +18,10 @@ import numpy as np
 import pandas as pd
 import requests
 
+from jarvis.config import (
+    ERRATIC_COOLDOWN, LIQUIDITY_WINDOW, MAX_LIMIT_DAYS, MAX_RUNUP_120, MAX_VOLATILITY_20,
+    MIN_HISTORY_SESSIONS, MIN_MEDIAN_TURNOVER_TRY, RUNUP_WINDOW, VOLATILITY_WINDOW,
+)
 from jarvis.features import _wilder, extra_features, local_features
 from jarvis.macro import macro_store
 from jarvis.store import Store
@@ -29,10 +33,19 @@ SYNC_MARK = ".synced_at"
 
 REASON_TEXT = {
     "": "Uygun: model bu hisseyi sıralıyor.",
-    "low_liquidity": "Düşük hacim: son 20 seansın medyan işlem hacmi 50 milyon TL'nin altında.",
-    "short_history": "Kısa geçmiş: 252 seanstan az fiyat verisi var.",
-    "limit_moves": "Tavan/taban: son 20 seansta 5'ten fazla tavan ya da taban günü.",
-    "erratic": "Düzensiz fiyat davranışı: aşırı oynaklık ya da 120 seansta iki katı aşan yükseliş.",
+    "low_liquidity": (
+        f"Düşük hacim: son {LIQUIDITY_WINDOW} seansın medyan işlem hacmi "
+        f"{MIN_MEDIAN_TURNOVER_TRY / 1e6:.0f} milyon TL'nin altında."
+    ),
+    "short_history": f"Kısa geçmiş: {MIN_HISTORY_SESSIONS} seanstan az fiyat verisi var.",
+    "limit_moves": (
+        f"Tavan/taban: son {LIQUIDITY_WINDOW} seansta {MAX_LIMIT_DAYS} günden fazla tavan ya da taban."
+    ),
+    "erratic": (
+        f"Düzensiz fiyat davranışı: {VOLATILITY_WINDOW} günlük oynaklık %{MAX_VOLATILITY_20 * 100:.1f}"
+        f" üstünde ya da {RUNUP_WINDOW} seansta {1 + MAX_RUNUP_120:.0f} katını aşan yükseliş"
+        f" (son tetiklenmeden sonra {ERRATIC_COOLDOWN} seans sürer)."
+    ).replace(".", ",", 1),
     "quarantined": "Karantina: veri kontrolünden geçemedi.",
     "excluded:vbts": "Borsa tedbiri (VBTS) altında.",
     "excluded:watchlist_market": "Yakın İzleme / piyasa öncesi pazarında işlem görüyor.",
@@ -253,6 +266,52 @@ def indicator_readings(equity: pd.DataFrame, benchmark: pd.Series) -> list[dict]
     add("Günlük oynaklık (20 gün)", volatility, _pct(volatility, signed=False),
         "çok oynak" if volatility > 0.045 else "sakin" if volatility < 0.02 else "olağan", "flat")
     return readings
+
+
+# -- news sentiment (optional) -------------------------------------------------
+
+SENTIMENT_MODEL = "savasy/bert-base-turkish-sentiment-cased"   # same checkpoint as live_inference
+SENTIMENT_SIGN = {"LABEL_0": -1.0, "LABEL_1": 1.0, "negative": -1.0, "positive": 1.0}
+_sentiment_pipeline = None
+
+
+def _default_classifier():
+    """The local Turkish BERT classifier, or None when transformers/torch are missing."""
+    global _sentiment_pipeline
+    if _sentiment_pipeline is None:
+        try:
+            from transformers import pipeline
+        except ImportError:
+            return None
+        try:
+            _sentiment_pipeline = pipeline("text-classification", model=SENTIMENT_MODEL,
+                                           device=-1, truncation=True)
+        except Exception:
+            return None
+    return _sentiment_pipeline
+
+
+def news_sentiment(headlines: list[str], classifier: Callable | None = None) -> dict:
+    """Mean headline sentiment in [-1, 1], or a reason why there is none.
+
+    Returns {"status": "scored", "score", "count"} or {"status": "unavailable" |
+    "no_news" | "failed"}. Headlines are matched to the stock by search only, so
+    the score is a hint about the news flow, not about the stock's prospects.
+    """
+    texts = [" ".join(str(text).split())[:600] for text in headlines if str(text).strip()]
+    if not texts:
+        return {"status": "no_news"}
+    classifier = classifier or _default_classifier()
+    if classifier is None:
+        return {"status": "unavailable"}
+    try:
+        outputs = classifier(texts)
+        values = [SENTIMENT_SIGN[item["label"]] * float(item["score"]) for item in outputs]
+    except Exception:
+        return {"status": "failed"}
+    if len(values) != len(texts) or not all(np.isfinite(values)):
+        return {"status": "failed"}
+    return {"status": "scored", "score": float(np.clip(np.mean(values), -1.0, 1.0)), "count": len(values)}
 
 
 # -- scorecard and model history ------------------------------------------------

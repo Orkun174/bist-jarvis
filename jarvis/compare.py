@@ -24,7 +24,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from jarvis.config import EXAM_SESSIONS, HORIZON, RANDOM_SEED, SIM_SESSIONS
+from jarvis.config import EXAM_SESSIONS, HORIZON, RANDOM_SEED, SIM_SESSIONS, TRAIN_YEARS
 from jarvis.features import FEATURE_SETS, FEATURES
 from jarvis.gate import compare_recipes
 from jarvis.metrics import daily_scores, summarize
@@ -90,7 +90,8 @@ def recipe_from_exam(path: Path, recipe_id: str | None = None) -> Recipe:
     wanted = recipe_id or exam["challenger_recipe_id"]
     for trial in exam["trials"]:
         for features in (FEATURES, *FEATURE_SETS):
-            recipe = Recipe(params=trial["params"], features=features, target=trial.get("target", "sign"))
+            recipe = Recipe(params=trial["params"], features=features, target=trial.get("target", "sign"),
+                            train_years=int(trial.get("train_years", TRAIN_YEARS)))
             if recipe.recipe_id == wanted:
                 return recipe
     raise ValueError(f"recipe {wanted} not found in {path}")

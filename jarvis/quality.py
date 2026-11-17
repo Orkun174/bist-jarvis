@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import collections
 import logging
 import math
 import time
@@ -58,6 +59,8 @@ ISYATIRIM_URL = (
 )
 REFERENCE_PROBE = 3        # tickers asked first to see whether the session is published
 REFERENCE_WORKERS = 16
+REFERENCE_RETRY_WORKERS = 4
+REFERENCE_TIMEOUT = (5, 25)  # connect, read; the cloud runner is far from the source
 REFERENCE_BUDGET_SECONDS = 600.0
 
 
@@ -68,7 +71,7 @@ def isyatirim_close(ticker: str, session: pd.Timestamp) -> float | None:
         ISYATIRIM_URL,
         params={"hisse": ticker, "startdate": day, "enddate": day},
         headers={"User-Agent": USER_AGENT},
-        timeout=10,
+        timeout=REFERENCE_TIMEOUT,
     )
     response.raise_for_status()
     for row in response.json().get("value", []):
@@ -86,36 +89,54 @@ def isyatirim_closes(
     """Unadjusted closes for `session` from Is Yatirim; empty when unavailable.
 
     A few tickers are probed first: when none has the session yet (the source
-    publishes late in the evening) the rest are not requested at all.
+    publishes late in the evening) the rest are not requested at all. Requests
+    that fail (timeouts, connection or HTTP errors, as opposed to "not
+    published") are tried once more with fewer workers while the budget lasts:
+    from the cloud runner a large share of the first pass used to time out.
     """
     deadline = time.monotonic() + budget_seconds
+    errors: collections.Counter = collections.Counter()
 
-    def safe(ticker: str) -> float | None:
+    def attempt(ticker: str) -> tuple[float | None, bool]:
+        """(close, failed): failed is True when the request itself went wrong."""
+        if time.monotonic() >= deadline:
+            return None, True
         try:
-            return fetch_one(ticker, session)
+            return fetch_one(ticker, session), False
         except Exception as error:
+            errors[type(error).__name__] += 1
             LOG.debug("İş Yatırım %s alınamadı: %s", ticker, error)
-            return None
+            return None, True
 
-    closes: dict[str, float] = {}
+    def run(batch: list[str], workers: int) -> tuple[dict[str, float], list[str]]:
+        found: dict[str, float] = {}
+        failed: list[str] = []
+        with ThreadPoolExecutor(max_workers=max(1, min(workers, len(batch) or 1))) as pool:
+            for ticker, (value, bad) in zip(batch, pool.map(attempt, batch)):
+                if value is not None:
+                    found[ticker] = value
+                elif bad:
+                    failed.append(ticker)
+        return found, failed
+
     probe, rest = tickers[:REFERENCE_PROBE], tickers[REFERENCE_PROBE:]
-    for ticker in probe:
-        value = safe(ticker)
-        if value is not None:
-            closes[ticker] = value
+    closes, failed = run(probe, REFERENCE_PROBE)
+    if not closes and failed:
+        retried, failed = run(failed, REFERENCE_PROBE)
+        closes.update(retried)
     if not closes:
-        LOG.warning("İş Yatırım %s seansını henüz yayınlamamış; karşılaştırma atlandı.",
-                    pd.Timestamp(session).date())
+        LOG.warning("İş Yatırım %s seansını henüz yayınlamamış ya da yanıt vermiyor; "
+                    "karşılaştırma atlandı (hatalar: %s).", pd.Timestamp(session).date(), dict(errors))
         return {}
 
-    def bounded(ticker: str) -> float | None:
-        return None if time.monotonic() >= deadline else safe(ticker)
-
-    with ThreadPoolExecutor(max_workers=REFERENCE_WORKERS) as pool:
-        for ticker, value in zip(rest, pool.map(bounded, rest)):
-            if value is not None:
-                closes[ticker] = value
-    LOG.info("İş Yatırım: %d / %d kapanış alındı.", len(closes), len(tickers))
+    found, more_failed = run(rest, REFERENCE_WORKERS)
+    closes.update(found)
+    failed += more_failed
+    if failed:
+        recovered, failed = run(failed, REFERENCE_RETRY_WORKERS)
+        closes.update(recovered)
+    LOG.info("İş Yatırım: %d / %d kapanış alındı; %d istek başarısız (hatalar: %s).",
+             len(closes), len(tickers), len(failed), dict(errors))
     return closes
 
 
