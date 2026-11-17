@@ -18,6 +18,10 @@ import numpy as np
 import pandas as pd
 import requests
 
+from jarvis.config import (
+    ERRATIC_COOLDOWN, LIQUIDITY_WINDOW, MAX_LIMIT_DAYS, MAX_RUNUP_120, MAX_VOLATILITY_20,
+    MIN_HISTORY_SESSIONS, MIN_MEDIAN_TURNOVER_TRY, RUNUP_WINDOW, VOLATILITY_WINDOW,
+)
 from jarvis.features import _wilder, extra_features, local_features
 from jarvis.macro import macro_store
 from jarvis.store import Store
@@ -29,10 +33,19 @@ SYNC_MARK = ".synced_at"
 
 REASON_TEXT = {
     "": "Uygun: model bu hisseyi sıralıyor.",
-    "low_liquidity": "Düşük hacim: son 20 seansın medyan işlem hacmi 50 milyon TL'nin altında.",
-    "short_history": "Kısa geçmiş: 252 seanstan az fiyat verisi var.",
-    "limit_moves": "Tavan/taban: son 20 seansta 5'ten fazla tavan ya da taban günü.",
-    "erratic": "Düzensiz fiyat davranışı: aşırı oynaklık ya da 120 seansta iki katı aşan yükseliş.",
+    "low_liquidity": (
+        f"Düşük hacim: son {LIQUIDITY_WINDOW} seansın medyan işlem hacmi "
+        f"{MIN_MEDIAN_TURNOVER_TRY / 1e6:.0f} milyon TL'nin altında."
+    ),
+    "short_history": f"Kısa geçmiş: {MIN_HISTORY_SESSIONS} seanstan az fiyat verisi var.",
+    "limit_moves": (
+        f"Tavan/taban: son {LIQUIDITY_WINDOW} seansta {MAX_LIMIT_DAYS} günden fazla tavan ya da taban."
+    ),
+    "erratic": (
+        f"Düzensiz fiyat davranışı: {VOLATILITY_WINDOW} günlük oynaklık %{MAX_VOLATILITY_20 * 100:.1f}"
+        f" üstünde ya da {RUNUP_WINDOW} seansta {1 + MAX_RUNUP_120:.0f} katını aşan yükseliş"
+        f" (son tetiklenmeden sonra {ERRATIC_COOLDOWN} seans sürer)."
+    ).replace(".", ",", 1),
     "quarantined": "Karantina: veri kontrolünden geçemedi.",
     "excluded:vbts": "Borsa tedbiri (VBTS) altında.",
     "excluded:watchlist_market": "Yakın İzleme / piyasa öncesi pazarında işlem görüyor.",

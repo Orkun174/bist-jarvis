@@ -104,8 +104,8 @@ def build_rows(
     if not frames:
         return pd.DataFrame(columns=ROW_COLUMNS)
     rows = pd.concat(frames, ignore_index=True)
-    rows[TURNOVER_RANK] = rows.groupby("date")["_turnover"].rank(pct=True)
     eligible = rows["eligible_pit"].astype(bool)
+    rows[TURNOVER_RANK] = rows["_turnover"].where(eligible).groupby(rows["date"]).rank(pct=True)
     ranked = rows[list(RANKED_SOURCES)].where(eligible).groupby(rows["date"]).rank(pct=True)
     rows = rows.join(ranked.add_suffix(RANK_SUFFIX))
     rows[TARGET_COLUMNS["cs_median"]] = _above_daily_median(rows, rows["fwd_excess"])

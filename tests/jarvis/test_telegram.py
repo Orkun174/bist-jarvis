@@ -228,3 +228,10 @@ def test_unproven_line_adds_the_quintile_spread_when_known():
     text = format_message(DAILY, QUALITY, LIVE_EMPTY, simulated)
     assert "en kötü beşte birliği ortalama %+0,95 geçti" in text
     assert "beşte bir" not in format_message(DAILY, QUALITY, LIVE_EMPTY, SIMULATED)
+
+
+def test_unproven_line_does_not_praise_a_failed_ranking():
+    simulated = {"top5_net_of_cost": {**SIMULATED["top5_net_of_cost"], "mean_quintile_spread": -0.003}}
+    text = format_message(DAILY, QUALITY, LIVE_EMPTY, simulated)
+    assert "daha tutarlı" not in text and "geçti" not in text.split("Model henüz")[1].split("Canlı")[0][-80:]
+    assert "Sıralamanın geneli de işe yaramadı" in text and "%-0,30" in text

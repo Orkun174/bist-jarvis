@@ -96,10 +96,16 @@ def _unproven_line(simulated: dict | None) -> str:
             f"{_percent(net['mean_top_excess'])} getirdi (maliyet düşülmüş); "
             f"kazanan gün oranı {_percent(net['hit_rate'], 0, signed=False)}."
         )
-        if net.get("mean_quintile_spread") is not None:
+        spread = net.get("mean_quintile_spread")
+        if spread is not None and spread > 0:
             text += (
                 " Sıralamanın geneli daha tutarlı: en iyi beşte birlik dilim, en kötü "
-                f"beşte birliği ortalama {_percent(net['mean_quintile_spread'])} geçti."
+                f"beşte birliği ortalama {_percent(spread)} geçti."
+            )
+        elif spread is not None:
+            text += (
+                " Sıralamanın geneli de işe yaramadı: en iyi beşte birlik dilim, en kötü "
+                f"beşte birlikten ortalama {_percent(spread)} farklı getirdi."
             )
         return text
     return "⚠️ Model henüz kanıtlanmadı; canlı karne birikene kadar bu sıralama deneme amaçlıdır."

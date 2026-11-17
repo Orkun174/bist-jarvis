@@ -276,10 +276,16 @@ def scorecard_screen(folder: Path) -> None:
 
 # -- page --------------------------------------------------------------------
 
+@st.cache_resource(show_spinner=False)
+def synced(folder_text: str) -> dict:
+    """Download once per app process, not once per browser tab or session."""
+    return desktop.sync_data(Path(folder_text))
+
+
 folder, downloadable = data_dir()
-if downloadable and "sync" not in st.session_state:
+if downloadable:
     with st.spinner("Güncel veri indiriliyor…"):
-        st.session_state["sync"] = desktop.sync_data(folder)
+        st.session_state["sync"] = synced(str(folder))
 
 st.title("BIST Jarvis")
 sync = st.session_state.get("sync")
@@ -287,12 +293,12 @@ header, refresh = st.columns([5, 1])
 if not downloadable:
     header.caption(f"Yerel klasör okunuyor: {folder}")
 elif sync and sync["ok"]:
-    header.caption("Veri güncel (bu açılışta indirildi).")
+    header.caption(f"Veri güncel (indirildi: {sync['synced_at']} UTC).")
 elif sync and sync["has_local"]:
     header.warning(f"Güncel veri indirilemedi ({sync['error']}). Son yerel kopya gösteriliyor"
                    + (f": {sync['synced_at']}" if sync.get("synced_at") else "."))
 if downloadable and refresh.button("Veriyi yenile"):
-    st.session_state.pop("sync", None)
+    synced.clear()
     st.cache_data.clear()
     st.rerun()
 

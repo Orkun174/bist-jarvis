@@ -35,12 +35,14 @@ BASE_DIR = (
 APP_PATH = BASE_DIR / os.environ.get("BIST_RADAR_APP", "jarvis_app.py")
 NEEDS_OLLAMA = APP_PATH.name == "app.py"
 WINDOW_TITLE = "BIST AI Radar" if NEEDS_OLLAMA else "BIST Jarvis"
+# Separate mutexes so the old and the new launcher can run side by side.
+MUTEX_NAME = r"Local\BIST_AI_Radar_Launcher" if NEEDS_OLLAMA else r"Local\BIST_Jarvis_Launcher"
 
 OLLAMA_PORT = 11434
-STREAMLIT_PORT = 8501
+STREAMLIT_PORT = 8501 if NEEDS_OLLAMA else 8765
 OLLAMA_URL = "http://127.0.0.1:11434"
-STREAMLIT_URL = "http://localhost:8501"
-STREAMLIT_HEALTH_URL = "http://127.0.0.1:8501/_stcore/health"
+STREAMLIT_URL = f"http://localhost:{STREAMLIT_PORT}"
+STREAMLIT_HEALTH_URL = f"http://127.0.0.1:{STREAMLIT_PORT}/_stcore/health"
 MODEL_NAME = "qwen2.5:7b"
 
 LOG_DIR = (
@@ -362,7 +364,7 @@ def ensure_streamlit() -> subprocess.Popen | None:
                         "-m", "streamlit",
                         "run", str(APP_PATH),
                         "--server.address=127.0.0.1",
-                        "--server.port=8501",
+                        f"--server.port={STREAMLIT_PORT}",
                         "--server.headless=true",
                         "--browser.gatherUsageStats=false",
                     ],
@@ -418,7 +420,7 @@ def main() -> None:
     kernel32.CloseHandle.restype = wintypes.BOOL
 
     mutex = kernel32.CreateMutexW(
-        None, False, r"Local\BIST_AI_Radar_Launcher"
+        None, False, MUTEX_NAME
     )
     if not mutex:
         raise ctypes.WinError(ctypes.get_last_error())
@@ -447,7 +449,7 @@ def main() -> None:
         # Standard native window controls remain available for closing the app.
         webview.create_window(
             WINDOW_TITLE,
-            "http://localhost:8501",
+            STREAMLIT_URL,
             width=1280,
             height=800,
         )

@@ -60,6 +60,12 @@ RANKED_FEATURES = tuple(name + RANK_SUFFIX for name in RANKED_SOURCES) + (TURNOV
 FEATURES_V3 = RANKED_FEATURES + MACRO_FEATURES
 FEATURES_V4 = RANKED_FEATURES            # no macro: pure "which stock today"
 FEATURE_SETS = (FEATURES_V2, FEATURES_V3, FEATURES_V4)
+FEATURE_SET_NAMES = {FEATURES: "v1", FEATURES_V2: "v2", FEATURES_V3: "v3", FEATURES_V4: "v4"}
+
+
+def feature_set_name(features: tuple[str, ...]) -> str:
+    """"v1".."v4" for the known feature sets, "custom-<n>" otherwise."""
+    return FEATURE_SET_NAMES.get(tuple(features), f"custom-{len(features)}")
 
 VIX_PERCENTILE = "VIX_Percentile"
 VIX_PERCENTILE_WINDOW = 252
