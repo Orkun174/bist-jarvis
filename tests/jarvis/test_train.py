@@ -193,6 +193,11 @@ def test_search_promotes_only_through_gate(tmp_path, monkeypatch):
     result = run_search(tmp_path, AS_OF, candidates=2, download=None)
     assert result["promoted"] is False and recipe_path.read_text(encoding="utf-8") == before
     monkeypatch.setattr(train_module, "compare_recipes", lambda a, b: {"promote": True, "days": 10})
+    monkeypatch.setattr(train_module, "confirm_recipes", lambda a, b: {"ok": False, "days": 15})
+    result = run_search(tmp_path, AS_OF, candidates=2, download=None)
+    assert result["promoted"] is False and result["confirmation"] == {"ok": False, "days": 15}
+    assert recipe_path.read_text(encoding="utf-8") == before  # the long window said no
+    monkeypatch.setattr(train_module, "confirm_recipes", lambda a, b: {"ok": True, "days": 15})
     result = run_search(tmp_path, AS_OF, candidates=2, download=None)
     assert result["promoted"] is True
     assert Recipe.from_dict(json.loads(recipe_path.read_text(encoding="utf-8"))).recipe_id == result["challenger_recipe_id"]
@@ -215,6 +220,7 @@ def test_structural_variants_cover_other_targets_and_extra_features():
 def test_search_tries_structural_variants_first(tmp_path, monkeypatch):
     prepare(tmp_path)
     monkeypatch.setattr(train_module, "compare_recipes", lambda a, b: {"promote": True, "days": 10})
+    monkeypatch.setattr(train_module, "confirm_recipes", lambda a, b: {"ok": True, "days": 15})
     result = run_search(tmp_path, AS_OF, candidates=5, download=None)
     saved = json.loads((tmp_path / "models" / "search" / "2026-11-13.json").read_text(encoding="utf-8"))
     assert [trial["target"] for trial in saved["trials"][:2]] == ["cs_median", "risk_adjusted"]

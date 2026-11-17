@@ -23,7 +23,7 @@ from jarvis.config import (
 )
 from jarvis.dataset import build_rows, prediction_slice, training_slice
 from jarvis.features import FEATURE_SETS
-from jarvis.gate import compare_recipes, drift_check, health_check
+from jarvis.gate import compare_recipes, confirm_recipes, drift_check, health_check
 from jarvis.ledger import LEDGER_COLUMNS, build_entries, empty_ledger, mature, read_ledger, record
 from jarvis.macro import REQUIRED_MACRO, load_macro, update_macro
 from jarvis.metrics import daily_scores, summarize
@@ -346,7 +346,8 @@ def run_search(
     extra features) followed by random hyperparameters on top of one of them.
     The best candidate is *chosen* on an earlier 60-session window and then
     *examined* against the champion on the most recent 60 sessions, which
-    played no part in choosing it.
+    played no part in choosing it. A challenger that passes is promoted only
+    if the last SIM_SESSIONS sessions confirm it (gate.confirm_recipes).
 
     It is chosen by rank IC, not by the return of its top picks: the top-pick
     return of 60 days is mostly noise, while rank IC uses every stock every
@@ -401,6 +402,12 @@ def run_search(
             }
         )
         if verdict["promote"]:
+            # The exam can be passed by luck; ask the long window before promoting.
+            long_start = calendar[max(len(calendar) - SIM_SESSIONS, 0)]
+            long_window = (long_start, session)
+            confirmation = confirm_recipes(score(champion, long_window), score(challenger, long_window))
+            result["confirmation"] = confirmation
+        if verdict["promote"] and confirmation["ok"]:
             path = data_dir / "models" / "recipe.json"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(challenger.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")

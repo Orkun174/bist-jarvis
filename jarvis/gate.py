@@ -61,6 +61,28 @@ def compare_recipes(
     return result
 
 
+def confirm_recipes(champion_scores: pd.DataFrame, challenger_scores: pd.DataFrame) -> dict:
+    """Second opinion for a challenger that passed the exam, over a much longer window.
+
+    Sixty sessions of top-pick returns can be won by luck: on 2026-11-17 two
+    challengers that passed (or nearly passed) the exam turned out to pick
+    *worse* top stocks than the champion over 245 sessions. A challenger is
+    therefore promoted only if, over the long window too, it is not behind on
+    either metric. No confidence level is asked here; the exam already did.
+    """
+    common = champion_scores.index.intersection(challenger_scores.index)
+    result: dict = {"ok": False, "days": int(len(common))}
+    if len(common) < MIN_COMPARE_DAYS:
+        result["reason"] = "too_few_days"
+        return result
+    excess = (challenger_scores.loc[common, "top_excess"] - champion_scores.loc[common, "top_excess"]).dropna()
+    rank_ic = (challenger_scores.loc[common, "rank_ic"] - champion_scores.loc[common, "rank_ic"]).dropna()
+    result["top_excess_diff"] = float(excess.mean()) if len(excess) else 0.0
+    result["rank_ic_diff"] = float(rank_ic.mean()) if len(rank_ic) else 0.0
+    result["ok"] = bool(result["top_excess_diff"] > 0 and result["rank_ic_diff"] > 0)
+    return result
+
+
 def health_check(scores: pd.DataFrame) -> dict:
     """Is the recipe still ranking stocks better than chance on recent days?"""
     rank_ic = scores["rank_ic"].dropna()

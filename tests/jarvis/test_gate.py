@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 import pandas as pd
 
@@ -103,3 +104,19 @@ def test_drift_without_previous_model_passes():
 def test_drift_too_few_names_passes():
     result = drift_check(series([0.4, 0.6]), series([0.6, 0.4]))
     assert result["ok"] is True and result["reason"] == "too_few_names"
+
+
+def test_confirmation_needs_both_metrics_ahead_over_the_long_window():
+    import numpy as np
+    import pandas as pd
+    from jarvis.gate import confirm_recipes
+
+    days = pd.bdate_range("2026-01-01", periods=100)
+    rng = np.random.default_rng(0)
+    base = pd.DataFrame({"top_excess": rng.normal(0, 0.03, 100), "rank_ic": rng.normal(0.05, 0.1, 100)}, index=days)
+    better = base + [0.002, 0.02]
+    assert confirm_recipes(base, better)["ok"] is True
+    lucky_ranker = base + [-0.002, 0.02]           # ranks better, picks worse
+    verdict = confirm_recipes(base, lucky_ranker)
+    assert verdict["ok"] is False and verdict["top_excess_diff"] == pytest.approx(-0.002)
+    assert confirm_recipes(base.head(10), better.head(10)) == {"ok": False, "days": 10, "reason": "too_few_days"}
