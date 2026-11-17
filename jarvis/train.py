@@ -22,12 +22,15 @@ from jarvis.config import (
     EXAM_SESSIONS, HEALTH_SESSIONS, HORIZON, MIN_TRAIN_ROWS, SIM_SESSIONS,
 )
 from jarvis.dataset import build_rows, prediction_slice, training_slice
-from jarvis.features import LOCAL_FEATURES
+from jarvis.features import FEATURES_V2
 from jarvis.gate import compare_recipes, drift_check, health_check
 from jarvis.ledger import LEDGER_COLUMNS, build_entries, empty_ledger, mature, read_ledger, record
 from jarvis.macro import REQUIRED_MACRO, load_macro, update_macro
 from jarvis.metrics import daily_scores, summarize
-from jarvis.model import DEFAULT_RECIPE, Recipe, explain, fit, load_model, predict, save_model
+from jarvis.model import (
+    DEFAULT_RECIPE, Recipe, explain, fit, load_model, predict, save_model, trainable,
+)
+from jarvis.dataset import TARGET_COLUMNS
 from jarvis.prices import Downloader, yahoo_download
 from jarvis.scorecard import scorecard
 from jarvis.store import Store
@@ -167,7 +170,7 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
 
     retrained = weights_changed = False
     active = champion
-    if checks["data"]["ok"] and checks["rows"]["ok"] and train["target"].nunique() == 2:
+    if checks["data"]["ok"] and checks["rows"]["ok"] and trainable(recipe, train):
         LOG.info("Model %d satırla yeniden eğitiliyor.", len(train))
         model = fit(recipe, train)
         retrained = True
@@ -207,8 +210,11 @@ def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None =
             picked = today_rows.set_index("ticker").loc[[item["ticker"] for item in recommendations]]
             # Macro features are the same for every stock today, and the eligible
             # stocks share much of their profile; name what sets each pick apart.
+            stock_specific = tuple(
+                name for name in active_recipe.features if not name.startswith("macro_")
+            )
             explained = explain(
-                model, active_recipe, picked, only=LOCAL_FEATURES, reference=today_rows
+                model, active_recipe, picked, only=stock_specific, reference=today_rows
             )
             for item, reasons in zip(recommendations, explained):
                 item["reasons"] = reasons
@@ -307,18 +313,44 @@ def sample_recipe(rng: np.random.Generator, base: Recipe) -> Recipe:
         "reg_alpha": float(rng.uniform(0.0, 1.0)),
         "reg_lambda": float(rng.uniform(0.0, 2.0)),
     }
-    return Recipe(params=params, features=base.features, train_years=base.train_years)
+    return Recipe(
+        params=params, features=base.features, train_years=base.train_years, target=base.target
+    )
+
+
+def structural_variants(champion: Recipe) -> list[Recipe]:
+    """The champion's own settings with each other target and feature set.
+
+    These ask one question at a time ("does this target help?", "do the extra
+    features help?") before random hyperparameters are tried on top.
+    """
+    variants = []
+    for features in dict.fromkeys((champion.features, FEATURES_V2)):
+        for target in TARGET_COLUMNS:
+            recipe = Recipe(
+                params=dict(champion.params), features=features,
+                train_years=champion.train_years, target=target,
+            )
+            if recipe.recipe_id != champion.recipe_id:
+                variants.append(recipe)
+    return variants
 
 
 def run_search(
-    data_dir: Path | str, as_of=None, candidates: int = 12, seed: int | None = None,
+    data_dir: Path | str, as_of=None, candidates: int = 16, seed: int | None = None,
     *, download: Downloader | None = yahoo_download,
 ) -> dict:
     """Try random recipes; one may replace the champion only through the exam.
 
+    Candidates are the champion's structural variants (other targets, the
+    extra features) followed by random hyperparameters on top of one of them.
     The best candidate is *chosen* on an earlier 60-session window and then
     *examined* against the champion on the most recent 60 sessions, which
     played no part in choosing it.
+
+    It is chosen by rank IC, not by the return of its top picks: the top-pick
+    return of 60 days is mostly noise, while rank IC uses every stock every
+    day. The exam still demands both.
     """
     data_dir = Path(data_dir)
     try:
@@ -334,14 +366,23 @@ def run_search(
     def score(recipe: Recipe, window) -> pd.DataFrame:
         return daily_scores(walk_forward(rows, recipe, calendar, window[0], window[1]))
 
+    variants = structural_variants(champion)
+    bases = [champion, *variants]
     trials = []
     best: tuple[float, Recipe] | None = None
     for number in range(candidates):
-        recipe = sample_recipe(rng, champion)
+        if number < len(variants):
+            recipe = variants[number]
+        else:
+            recipe = sample_recipe(rng, bases[int(rng.integers(len(bases)))])
         summary = summarize(score(recipe, selection))
-        trials.append({"recipe_id": recipe.recipe_id, "params": recipe.params, "selection": summary})
-        value = summary["mean_top_excess"]
-        LOG.info("Aday %d/%d: seçim penceresi fazla getiri %s", number + 1, candidates, value)
+        trials.append({
+            "recipe_id": recipe.recipe_id, "params": recipe.params, "target": recipe.target,
+            "features": len(recipe.features), "selection": summary,
+        })
+        value = summary["mean_rank_ic"]
+        LOG.info("Aday %d/%d (%s, %d özellik): seçim penceresi rank IC %s",
+                 number + 1, candidates, recipe.target, len(recipe.features), value)
         if value is not None and (best is None or value > best[0]):
             best = (value, recipe)
 

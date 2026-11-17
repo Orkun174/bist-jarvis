@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from jarvis.dataset import build_rows, prediction_slice, training_slice
-from jarvis.features import FEATURES, LOCAL_FEATURES, VIX_PERCENTILE
+from jarvis.dataset import TARGET_COLUMNS, build_rows, prediction_slice, training_slice
+from jarvis.features import EXTRA_FEATURES, FEATURES, LOCAL_FEATURES, VIX_PERCENTILE
 from jarvis.store import Store
 from tests.jarvis.synthetic import CALENDAR, SESSION, build_market, random_ohlcv
 
@@ -18,8 +18,9 @@ def market(tmp_path_factory):
 
 def test_columns(market):
     rows = market[3]
-    expected = ["ticker", "date", *FEATURES, VIX_PERCENTILE, "close", "eligible_pit",
-                "fwd_excess", "target", "label_end"]
+    expected = ["ticker", "date", *FEATURES, *EXTRA_FEATURES, VIX_PERCENTILE, "close",
+                "eligible_pit", "fwd_excess", "target", "target_cs_median",
+                "target_risk_adjusted", "label_end"]
     assert list(rows.columns) == expected
     assert rows[list(LOCAL_FEATURES)].notna().all().all()
     assert rows["date"].max() == SESSION
@@ -78,7 +79,8 @@ def test_no_lookahead_in_features(tmp_path, market):
     cutoff = CALENDAR[-31]
     left = rows[rows["date"] <= cutoff].reset_index(drop=True)
     right = changed[changed["date"] <= cutoff].reset_index(drop=True)
-    pd.testing.assert_frame_equal(left[["ticker", "date", *FEATURES]], right[["ticker", "date", *FEATURES]])
+    columns = ["ticker", "date", *FEATURES, *EXTRA_FEATURES]
+    pd.testing.assert_frame_equal(left[columns], right[columns])
 
 
 def test_ticker_missing_bar_at_horizon_has_nan_label(tmp_path):
@@ -111,3 +113,33 @@ def test_prediction_slice_only_todays_eligible(market):
     today = prediction_slice(rows, SESSION, {"S00", "S03", "NOPE"})
     assert sorted(today["ticker"]) == ["S00", "S03"]
     assert (today["date"] == SESSION).all()
+
+
+def test_cs_median_target_compares_with_the_days_median_eligible_stock(market):
+    rows = market[3]
+    day = rows[(rows["date"] == CALENDAR[300]) & rows["eligible_pit"].astype(bool)]
+    assert len(day) >= 3
+    median = day["fwd_excess"].median()
+    expected = (day["fwd_excess"] > median).astype(float)
+    assert (day[TARGET_COLUMNS["cs_median"]] == expected).all()
+
+
+def test_risk_adjusted_target_divides_by_recent_volatility(market):
+    rows = market[3]
+    day = rows[(rows["date"] == CALENDAR[300]) & rows["eligible_pit"].astype(bool)]
+    scaled = day["fwd_excess"] / day["Volatility_20D"]
+    expected = (scaled > scaled.median()).astype(float)
+    assert (day[TARGET_COLUMNS["risk_adjusted"]] == expected).all()
+
+
+def test_alternative_targets_are_unknown_where_the_outcome_is(market):
+    rows = market[3]
+    tail = rows[rows["date"] > CALENDAR[-6]]
+    for column in TARGET_COLUMNS.values():
+        assert tail[column].isna().all()
+
+
+def test_turnover_rank_is_a_share_within_the_day(market):
+    rows = market[3]
+    day = rows[rows["date"] == CALENDAR[300]]
+    assert day["Turnover_Rank"].between(0, 1).all() and day["Turnover_Rank"].max() == 1.0

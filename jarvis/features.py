@@ -35,6 +35,23 @@ MACRO_FEATURES = tuple(
 )
 FEATURES = LOCAL_FEATURES + MACRO_FEATURES
 
+# Candidate stock-specific features. They are not part of the default recipe:
+# a recipe that uses them has to win the weekly exam first.
+TURNOVER_RANK = "Turnover_Rank"   # cross-sectional, filled in by dataset.build_rows
+EXTRA_FEATURES = (
+    "Rel_Return_5D",
+    "Rel_Return_20D",
+    "Rel_Return_60D",
+    "Rel_Return_120D",
+    "Volatility_20D",
+    "High_252_Distance",
+    "Volume_Trend",
+    "Beta_60D",
+    TURNOVER_RANK,
+)
+STOCK_FEATURES = LOCAL_FEATURES + EXTRA_FEATURES
+FEATURES_V2 = STOCK_FEATURES + MACRO_FEATURES
+
 VIX_PERCENTILE = "VIX_Percentile"
 VIX_PERCENTILE_WINDOW = 252
 VIX_PERCENTILE_MIN_PERIODS = 126
@@ -112,6 +129,33 @@ def local_features(equity: pd.DataFrame, benchmark_close: pd.Series) -> pd.DataF
         index=equity.index,
     )
     return frame.replace([np.inf, -np.inf], np.nan)
+
+
+def extra_features(equity: pd.DataFrame, benchmark_close: pd.Series) -> pd.DataFrame:
+    """Longer-horizon stock features, using only current and past bars.
+
+    Returns every EXTRA_FEATURES column except the cross-sectional
+    TURNOVER_RANK, plus the raw "_turnover" it is ranked from.
+    """
+    close, volume = equity["Close"], equity["Volume"]
+    benchmark = benchmark_close.reindex(equity.index)
+    returns = close.pct_change(fill_method=None)
+    benchmark_returns = benchmark.pct_change(fill_method=None)
+
+    columns = {}
+    for span in (5, 20, 60, 120):
+        columns[f"Rel_Return_{span}D"] = (
+            close.pct_change(span, fill_method=None) - benchmark.pct_change(span, fill_method=None)
+        )
+    columns["Volatility_20D"] = returns.rolling(20).std()
+    columns["High_252_Distance"] = close / close.rolling(252, min_periods=120).max() - 1.0
+    columns["Volume_Trend"] = (
+        volume.rolling(20).mean() / volume.rolling(120).mean().replace(0, np.nan)
+    )
+    variance = benchmark_returns.rolling(60).var()
+    columns["Beta_60D"] = returns.rolling(60).cov(benchmark_returns) / variance.replace(0, np.nan)
+    columns["_turnover"] = (close * volume).rolling(20).median()
+    return pd.DataFrame(columns, index=equity.index).replace([np.inf, -np.inf], np.nan)
 
 
 def _available_on_calendar(native: pd.DataFrame, calendar: pd.DatetimeIndex) -> pd.DataFrame:

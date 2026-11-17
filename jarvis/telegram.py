@@ -23,6 +23,15 @@ FEATURE_LABELS = {
     "ADX_14": "trend gücü (ADX)",
     "CMF_20": "para akışı (CMF)",
     "StochRSI_K": "StochRSI",
+    "Rel_Return_5D": "endekse göre 5 günlük getiri",
+    "Rel_Return_20D": "endekse göre 1 aylık getiri",
+    "Rel_Return_60D": "endekse göre 3 aylık getiri",
+    "Rel_Return_120D": "endekse göre 6 aylık getiri",
+    "Volatility_20D": "oynaklık (20 gün)",
+    "High_252_Distance": "52 hafta zirvesine uzaklık",
+    "Volume_Trend": "hacim eğilimi",
+    "Beta_60D": "beta",
+    "Turnover_Rank": "işlem hacmi sırası",
 }
 MACRO_LABELS = {
     "USDTRY": "dolar/TL", "BRENT": "Brent petrol", "GOLD": "altın", "SP500": "S&P 500",

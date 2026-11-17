@@ -14,6 +14,7 @@ import pandas as pd
 from xgboost import XGBClassifier
 
 from jarvis.config import RANDOM_SEED, TRAIN_YEARS
+from jarvis.dataset import TARGET_COLUMNS
 from jarvis.features import FEATURE_VERSION, FEATURES
 
 
@@ -22,13 +23,25 @@ class Recipe:
     params: dict = field(hash=False)
     features: tuple[str, ...] = FEATURES
     train_years: int = TRAIN_YEARS
+    target: str = "sign"
+
+    def __post_init__(self) -> None:
+        if self.target not in TARGET_COLUMNS:
+            raise ValueError(f"unknown target: {self.target}")
+
+    @property
+    def target_column(self) -> str:
+        return TARGET_COLUMNS[self.target]
 
     def to_dict(self) -> dict:
-        return {
+        data = {
             "params": dict(self.params),
             "features": list(self.features),
             "train_years": self.train_years,
         }
+        if self.target != "sign":  # left out by default so existing recipe ids stay the same
+            data["target"] = self.target
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> "Recipe":
@@ -36,6 +49,7 @@ class Recipe:
             params=dict(data["params"]),
             features=tuple(data["features"]),
             train_years=int(data.get("train_years", TRAIN_YEARS)),
+            target=data.get("target", "sign"),
         )
 
     @property
@@ -73,9 +87,15 @@ def new_classifier(recipe: Recipe) -> XGBClassifier:
     )
 
 
+def trainable(recipe: Recipe, train: pd.DataFrame) -> bool:
+    """Both outcomes of the recipe's target are present."""
+    return train[recipe.target_column].nunique() == 2
+
+
 def fit(recipe: Recipe, train: pd.DataFrame) -> XGBClassifier:
+    train = train[train[recipe.target_column].notna()]
     model = new_classifier(recipe)
-    model.fit(_matrix(recipe, train), train["target"].astype(int))
+    model.fit(_matrix(recipe, train), train[recipe.target_column].astype(int))
     return model
 
 

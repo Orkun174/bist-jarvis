@@ -1,7 +1,15 @@
 """(ticker, day) rows for training and prediction, built without lookahead.
 
-Target: the stock's return over the next HORIZON sessions minus the BIST100
-return over the same sessions, positive or not.
+Outcome: the stock's return over the next HORIZON sessions minus the BIST100
+return over the same sessions (`fwd_excess`). A recipe picks one of three
+yes/no targets derived from it (TARGET_COLUMNS):
+
+- sign:          did the stock beat the index?
+- cs_median:     did it beat that day's median eligible stock? This removes the
+                 part every stock shares on a given day, which stock-level
+                 features cannot predict.
+- risk_adjusted: the same question after dividing by the stock's recent
+                 volatility, so a volatile stock is not rewarded for moving more.
 """
 
 from __future__ import annotations
@@ -13,13 +21,30 @@ import pandas as pd
 
 from jarvis.config import EMBARGO_SESSIONS, HORIZON, TRAIN_YEARS
 from jarvis.eligibility import eligibility_history
-from jarvis.features import FEATURES, LOCAL_FEATURES, VIX_PERCENTILE, local_features, macro_features
+from jarvis.features import (
+    EXTRA_FEATURES, FEATURES, LOCAL_FEATURES, TURNOVER_RANK, VIX_PERCENTILE,
+    extra_features, local_features, macro_features,
+)
 from jarvis.store import Store
 
+TARGET_COLUMNS = {
+    "sign": "target",
+    "cs_median": "target_cs_median",
+    "risk_adjusted": "target_risk_adjusted",
+}
 ROW_COLUMNS = [
-    "ticker", "date", *FEATURES, VIX_PERCENTILE, "close", "eligible_pit",
-    "fwd_excess", "target", "label_end",
+    "ticker", "date", *FEATURES, *EXTRA_FEATURES, VIX_PERCENTILE, "close", "eligible_pit",
+    "fwd_excess", *TARGET_COLUMNS.values(), "label_end",
 ]
+
+
+def _above_daily_median(rows: pd.DataFrame, values: pd.Series) -> pd.Series:
+    """1.0 where `values` beats that day's median over eligible rows; NaN where unknown."""
+    eligible = rows["eligible_pit"].astype(bool) & values.notna()
+    median = values[eligible].groupby(rows.loc[eligible, "date"]).median()
+    reference = rows["date"].map(median)
+    result = (values > reference).astype(float)
+    return result.where(values.notna() & reference.notna())
 
 
 def build_rows(
@@ -55,7 +80,8 @@ def build_rows(
         stock_forward = close_on_calendar.shift(-HORIZON) / close_on_calendar - 1.0
         excess = (stock_forward - benchmark_forward).reindex(equity.index)
 
-        frame = features.join(macro_frame.reindex(equity.index))
+        frame = features.join(extra_features(equity, benchmark["Close"]))
+        frame = frame.join(macro_frame.reindex(equity.index))
         frame["close"] = equity["Close"]
         frame["eligible_pit"] = eligibility["eligible_pit"].to_numpy()
         frame["fwd_excess"] = excess
@@ -69,6 +95,10 @@ def build_rows(
     if not frames:
         return pd.DataFrame(columns=ROW_COLUMNS)
     rows = pd.concat(frames, ignore_index=True)
+    rows[TURNOVER_RANK] = rows.groupby("date")["_turnover"].rank(pct=True)
+    rows[TARGET_COLUMNS["cs_median"]] = _above_daily_median(rows, rows["fwd_excess"])
+    volatility = rows["Volatility_20D"].where(rows["Volatility_20D"] > 0)
+    rows[TARGET_COLUMNS["risk_adjusted"]] = _above_daily_median(rows, rows["fwd_excess"] / volatility)
     return rows[ROW_COLUMNS]
 
 

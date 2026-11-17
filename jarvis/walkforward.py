@@ -12,7 +12,7 @@ import pandas as pd
 from jarvis.config import MIN_TRAIN_ROWS, REFIT_EVERY
 from jarvis.dataset import training_slice
 from jarvis.features import VIX_PERCENTILE
-from jarvis.model import Recipe, fit, predict
+from jarvis.model import Recipe, fit, predict, trainable
 
 COLUMNS = ["date", "ticker", "prob", "fwd_excess", VIX_PERCENTILE]
 
@@ -32,7 +32,7 @@ def walk_forward(
     for offset in range(0, len(sessions), refit_every):
         block = sessions[offset:offset + refit_every]
         train = training_slice(rows, block[0], calendar, train_years=recipe.train_years)
-        if len(train) < MIN_TRAIN_ROWS or train["target"].nunique() < 2:
+        if len(train) < MIN_TRAIN_ROWS or not trainable(recipe, train):
             continue
         model = fit(recipe, train)
         today = eligible[eligible["date"].isin(block)]
