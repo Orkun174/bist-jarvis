@@ -7,6 +7,8 @@ from typing import Callable
 import pandas as pd
 import requests
 
+from jarvis.news import sentiment_word
+
 TELEGRAM_LIMIT = 4096
 MONTHS = [
     "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
@@ -79,6 +81,14 @@ def _reasons(item: dict) -> str:
     if opposing:
         parts.append("aleyhine: " + ", ".join(opposing))
     return " · ".join(parts)
+
+
+def _news_line(news: dict | None) -> str:
+    """"haber: olumlu (+0,45, 5 başlık)"; empty when the score is unknown."""
+    if not news or news.get("status") != "scored":
+        return ""
+    score = news["score"]
+    return f"haber: {sentiment_word(score)} ({score:+.2f}, {news['count']} başlık)".replace(".", ",", 1)
 
 
 def _mark(check: dict | None) -> str:
@@ -179,10 +189,17 @@ def format_message(
     recommendations = daily.get("recommendations") or []
     if recommendations:
         lines.append("Model sıralaması (ilk 5):")
+        headlines = daily.get("news") or {}
         for item in recommendations:
             reasons = _reasons(item)
             lines.append(f"{item['rank']}. {item['ticker']}" + (f" — {reasons}" if reasons else ""))
+            mood = _news_line(headlines.get(item["ticker"]))
+            if mood:
+                lines.append(f"   {mood}")
         lines.append("(lehine/aleyhine: modelin sıralamasını en çok etkileyen etkenler)")
+        if any(_news_line(headlines.get(item["ticker"])) for item in recommendations):
+            lines.append("(haber: son başlıkların Türkçe BERT ile duygu skoru, −1 ile +1; "
+                         "modelin sırasına katılmaz)")
         bottom = [item["ticker"] for item in daily.get("bottom") or []]
         if bottom:
             lines += ["", "Sıralamanın sonu (modelin en zayıf gördükleri): " + ", ".join(bottom)]

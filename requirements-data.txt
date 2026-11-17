@@ -6,9 +6,9 @@ pyarrow==19.0.1
 requests
 beautifulsoup4
 yfinance
-isyatirimhisse>=5.0.0
 exchange-calendars==4.13.2
 tzdata
 pytest
 xgboost
-scikit-learn
+scikit-learn   # XGBClassifier (sklearn API) needs it
+feedparser   # jarvis.news (its tests run in the cloud job)
