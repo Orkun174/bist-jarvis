@@ -142,24 +142,3 @@ def test_model_history_and_exams(data):
     exams = desktop.recipe_exams(root)
     assert exams.iloc[0]["challenger"] == "b" and not exams.iloc[0]["promoted"]
     assert desktop.graded_recommendations(root).empty
-
-
-def test_news_sentiment_with_a_classifier():
-    def fake(texts):
-        return [{"label": "LABEL_1", "score": 0.9}, {"label": "LABEL_0", "score": 0.5}][: len(texts)]
-
-    result = desktop.news_sentiment(["İyi haber", "  ", "Kötü haber"], classifier=fake)
-    assert result["status"] == "scored" and result["count"] == 2
-    assert result["score"] == pytest.approx((0.9 - 0.5) / 2)
-
-
-def test_news_sentiment_without_news_or_model():
-    assert desktop.news_sentiment([], classifier=lambda texts: []) == {"status": "no_news"}
-    assert desktop.news_sentiment(["x"], classifier=lambda texts: [{"label": "?", "score": 1}]) == {"status": "failed"}
-    import jarvis.desktop as module
-    original = module._default_classifier
-    module._default_classifier = lambda: None
-    try:
-        assert desktop.news_sentiment(["x"]) == {"status": "unavailable"}
-    finally:
-        module._default_classifier = original

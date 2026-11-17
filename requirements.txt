@@ -1,22 +1,11 @@
-# Runtime dependencies (mirrors .github/workflows/daily_scan.yml)
-numpy<2
-pandas<3
-plotly<6.0.0
-vectorbt
-xgboost
-yfinance
-isyatirimhisse>=5.0.0
-exchange-calendars==4.13.2
-requests
+# PC application (jarvis_app.py, launcher.py) plus everything the daily job needs.
+-r requirements-data.txt
 streamlit
-shap
-scikit-learn
+plotly<6.0.0
 feedparser
-beautifulsoup4
-transformers>=4.48,<5
-huggingface_hub
-tzdata
-pyarrow==19.0.1  # newer releases require NumPy 2; project pins numpy<2
-pytest
-# torch is installed separately from the CPU index:
+# Optional, currently switched off (jarvis.news.SENTIMENT_ENABLED). torch from the CPU index:
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
+transformers>=4.48,<5
+# Building BIST_Jarvis.exe:
+#   pip install pywebview pyinstaller
+#   python -m PyInstaller --onefile --windowed --name BIST_Jarvis launcher.py

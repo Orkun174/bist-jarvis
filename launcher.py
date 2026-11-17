@@ -1,16 +1,10 @@
 # launcher.py
-"""Windows launcher for BIST Jarvis inside a native pywebview window.
-
-Opens jarvis_app.py (set BIST_RADAR_APP=app.py for the old single-stock radar,
-which also needs Ollama). The new application does not use Ollama, so it is
-only started for the old one.
-"""
+"""Windows launcher for BIST Jarvis (jarvis_app.py) inside a native pywebview window."""
 
 from __future__ import annotations
 
 import ctypes
 from ctypes import wintypes
-import json
 import logging
 import os
 from pathlib import Path
@@ -32,18 +26,13 @@ BASE_DIR = (
     if getattr(sys, "frozen", False)
     else Path(__file__).resolve().parent
 )
-APP_PATH = BASE_DIR / os.environ.get("BIST_RADAR_APP", "jarvis_app.py")
-NEEDS_OLLAMA = APP_PATH.name == "app.py"
-WINDOW_TITLE = "BIST AI Radar" if NEEDS_OLLAMA else "BIST Jarvis"
-# Separate mutexes so the old and the new launcher can run side by side.
-MUTEX_NAME = r"Local\BIST_AI_Radar_Launcher" if NEEDS_OLLAMA else r"Local\BIST_Jarvis_Launcher"
+APP_PATH = BASE_DIR / "jarvis_app.py"
+WINDOW_TITLE = "BIST Jarvis"
+MUTEX_NAME = r"Local\BIST_Jarvis_Launcher"
 
-OLLAMA_PORT = 11434
-STREAMLIT_PORT = 8501 if NEEDS_OLLAMA else 8765
-OLLAMA_URL = "http://127.0.0.1:11434"
+STREAMLIT_PORT = 8765
 STREAMLIT_URL = f"http://localhost:{STREAMLIT_PORT}"
 STREAMLIT_HEALTH_URL = f"http://127.0.0.1:{STREAMLIT_PORT}/_stcore/health"
-MODEL_NAME = "qwen2.5:7b"
 
 LOG_DIR = (
     Path(os.environ.get("LOCALAPPDATA", str(Path.home())))
@@ -71,25 +60,6 @@ def port_is_listening(port: int) -> bool:
             # IPv6 may be disabled; continue checking available interfaces.
             continue
     return False
-
-
-def get_json(url: str, timeout: float = 3.0) -> dict:
-    """Read and validate a local JSON response."""
-    with LOCAL_HTTP.open(url, timeout=timeout) as response:
-        result = json.load(response)
-
-    if not isinstance(result, dict):
-        raise ValueError("Expected a JSON object.")
-    return result
-
-
-def ollama_ready() -> bool:
-    """Confirm an Ollama API response instead of relying only on its port."""
-    try:
-        models = get_json(f"{OLLAMA_URL}/api/tags").get("models")
-        return isinstance(models, list)
-    except (OSError, ValueError, urllib.error.URLError):
-        return False
 
 
 def streamlit_ready() -> bool:
@@ -194,25 +164,6 @@ def stop_owned_streamlit(process: subprocess.Popen | None) -> None:
         )
 
 
-def find_ollama() -> Path:
-    """Locate an installed Ollama executable."""
-    candidates = [
-        shutil.which("ollama.exe"),
-        str(
-            Path(os.environ.get("LOCALAPPDATA", ""))
-            / "Programs" / "Ollama" / "ollama.exe"
-        ),
-    ]
-
-    for candidate in candidates:
-        if candidate and Path(candidate).is_file():
-            return Path(candidate).resolve()
-
-    raise FileNotFoundError(
-        "Ollama was not found. Install Ollama or add ollama.exe to PATH."
-    )
-
-
 def find_python() -> Path:
     """Find external Python without recursively invoking the frozen launcher."""
     explicit = os.environ.get("BIST_RADAR_PYTHON")
@@ -264,73 +215,6 @@ def find_python() -> Path:
         "Provide .venv\\Scripts\\python.exe beside the launcher or set "
         "BIST_RADAR_PYTHON to an absolute interpreter path."
     )
-
-
-def ensure_ollama() -> None:
-    """Reuse Ollama when present; otherwise start its background API server."""
-    if not port_is_listening(OLLAMA_PORT):
-        executable = find_ollama()
-
-        # Recheck immediately before spawning.
-        if not port_is_listening(OLLAMA_PORT):
-            environment = os.environ.copy()
-            environment["OLLAMA_HOST"] = "127.0.0.1:11434"
-
-            start_hidden(
-                [str(executable), "serve"],
-                "ollama.log",
-                environment,
-            )
-
-            # Allow initial service/GPU setup before checking readiness.
-            time.sleep(4)
-
-    wait_until_ready(ollama_ready, 45, "Ollama")
-
-    # Load the model through HTTP rather than an interactive Ollama terminal.
-    payload = json.dumps(
-        {
-            "model": MODEL_NAME,
-            "prompt": "",
-            "stream": False,
-            "keep_alive": "30m",
-        }
-    ).encode("utf-8")
-
-    request = urllib.request.Request(
-        f"{OLLAMA_URL}/api/generate",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
-    try:
-        with LOCAL_HTTP.open(request, timeout=240) as response:
-            result = json.load(response)
-    except urllib.error.HTTPError as exc:
-        if exc.code == 404:
-            raise RuntimeError(
-                f"The Ollama model {MODEL_NAME} is unavailable.\n"
-                f"Run: ollama pull {MODEL_NAME}"
-            ) from exc
-
-        raise RuntimeError(
-            f"Ollama model loading failed with HTTP {exc.code}."
-        ) from exc
-    except (OSError, ValueError, urllib.error.URLError) as exc:
-        raise RuntimeError(
-            "Ollama could not load the model. Check available memory "
-            "and the Ollama logs."
-        ) from exc
-
-    if (
-        not isinstance(result, dict)
-        or result.get("error")
-        or result.get("done") is not True
-    ):
-        raise RuntimeError(
-            "Ollama did not confirm successful model loading."
-        )
 
 
 def ensure_streamlit() -> subprocess.Popen | None:
@@ -390,7 +274,7 @@ def show_error(message: str) -> None:
     ctypes.windll.user32.MessageBoxW(
         None,
         message,
-        "BIST AI Radar — Launcher Error",
+        "BIST Jarvis — Launcher Error",
         0x10,
     )
 
@@ -438,11 +322,9 @@ def main() -> None:
 
         acquired = True
 
-        if NEEDS_OLLAMA:
-            ensure_ollama()
         streamlit_process = ensure_streamlit()
 
-        if (NEEDS_OLLAMA and not ollama_ready()) or not streamlit_ready():
+        if not streamlit_ready():
             raise RuntimeError("A background service became unavailable.")
 
         # Native desktop window without browser tabs, address bars, or toolbars.
@@ -459,7 +341,7 @@ def main() -> None:
 
     finally:
         # Runs on normal window closure and on webview initialization failures.
-        # Ollama remains available; only this launcher's Streamlit is stopped.
+        # Only the Streamlit server this launcher started is stopped.
         stop_owned_streamlit(streamlit_process)
 
         if acquired:

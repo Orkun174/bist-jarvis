@@ -16,7 +16,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
-from jarvis import desktop
+from jarvis import desktop, news
 
 SCREENS = ["Günün önerileri", "Hisse araştır", "Karne ve model"]
 TONE_MARK = {"up": "🟢", "down": "🔴", "flat": "⚪"}
@@ -61,13 +61,12 @@ def open_stock(ticker: str) -> None:
 
 @st.cache_data(show_spinner=False, ttl=1800)
 def _fetch_news(ticker: str) -> list[dict]:
-    from core.market_data import fetch_news
-    return fetch_news(ticker, limit=5)
+    return news.fetch_news(ticker)
 
 
 @st.cache_data(show_spinner="Haber duygusu hesaplanıyor…", ttl=1800)
 def cached_sentiment(titles: tuple[str, ...]) -> dict:
-    return desktop.news_sentiment(list(titles))
+    return news.news_sentiment(list(titles))
 
 
 def news_for(ticker: str) -> list[dict] | None:
@@ -182,27 +181,25 @@ def stock_screen(folder: Path) -> None:
                    "özetidir, öngörü değildir.")
     with right:
         st.subheader("Haberler")
-        news = news_for(ticker)
-        if news is None:
+        headlines = news_for(ticker)
+        if headlines is None:
             st.caption("Haberler şu an alınamadı. Hisseyi yeniden seçince tekrar denenir.")
-        elif not news:
+        elif not headlines:
             st.caption("Güncel haber bulunamadı.")
         else:
-            for item in news:
+            for item in headlines:
                 title, link = item.get("title", ""), item.get("url") or item.get("link")
                 day = str(item.get("published_at") or "")[:10]
                 line = f"[{title}]({link})" if link else title
                 st.markdown(f"- {line}" + (f" · {day}" if day else ""))
-            mood = cached_sentiment(tuple(item.get("title", "") for item in news))
+            mood = cached_sentiment(tuple(item.get("title", "") for item in headlines))
             if mood["status"] == "scored":
-                word = "olumlu" if mood["score"] > 0.2 else "olumsuz" if mood["score"] < -0.2 else "nötr"
+                word = news.sentiment_word(mood["score"])
                 st.markdown(f"**Haber duygusu:** {mood['score']:+.2f} ({word}, {mood['count']} başlık)"
                             .replace(".", ",", 1))
             elif mood["status"] == "unavailable":
                 st.caption("Duygu skoru için `transformers` ve `torch` kurulu olmalı.")
-            st.caption("Kaynak: Google Haberler. Başlıklar otomatik aranır; ilgisiz olabilir. "
-                       "Duygu skoru (−1 ile +1) Türkçe BERT modeliyle başlıklardan hesaplanır; "
-                       "öneri değildir.")
+            st.caption("Kaynak: Google Haberler. Başlıklar otomatik aranır; ilgisiz olabilir.")
 
 
 def scorecard_screen(folder: Path) -> None:

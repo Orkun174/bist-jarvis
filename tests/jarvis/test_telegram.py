@@ -235,3 +235,14 @@ def test_unproven_line_does_not_praise_a_failed_ranking():
     text = format_message(DAILY, QUALITY, LIVE_EMPTY, simulated)
     assert "daha tutarlı" not in text and "geçti" not in text.split("Model henüz")[1].split("Canlı")[0][-80:]
     assert "Sıralamanın geneli de işe yaramadı" in text and "%-0,30" in text
+
+
+def test_message_shows_headline_sentiment_under_each_scored_pick():
+    first = DAILY["recommendations"][0]["ticker"]
+    daily = {**DAILY, "news": {first: {"status": "scored", "score": 0.45, "count": 5, "headlines": []}}}
+    text = format_message(daily, QUALITY, LIVE_EMPTY, SIMULATED)
+    assert "   haber: olumlu (+0,45, 5 başlık)" in text
+    assert "duygu skoru" in text
+    plain = format_message(DAILY, QUALITY, LIVE_EMPTY, SIMULATED)
+    assert "haber:" not in plain and "duygu skoru" not in plain
+
