@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from jarvis.features import FEATURES
 from jarvis.model import DEFAULT_RECIPE, Recipe, fit, load_model, predict, save_model
@@ -100,3 +101,59 @@ def test_explain_empty_rows():
 
     model = fit(SMALL, synthetic_rows(seed=0))
     assert explain(model, SMALL, synthetic_rows(seed=1).iloc[0:0]) == []
+
+
+def two_factor_rows(n=3000, seed=0):
+    rng = np.random.default_rng(seed)
+    data = pd.DataFrame(rng.normal(size=(n, len(FEATURES))), columns=list(FEATURES))
+    signal = data["CMF_20"] + 0.6 * data["ADX_14"] + 0.6 * data["macro_VIX_1d_lag"]
+    data["target"] = (signal + rng.normal(0, 0.1, n) > 0).astype(float)
+    return data
+
+
+def test_explain_can_be_limited_to_stock_specific_features():
+    from jarvis.features import LOCAL_FEATURES
+    from jarvis.model import explain
+
+    model = fit(SMALL, two_factor_rows(seed=0))
+    rows = two_factor_rows(seed=1).head(50)
+    for reasons in explain(model, SMALL, rows, top=3, only=LOCAL_FEATURES):
+        assert all(reason["feature"] in LOCAL_FEATURES for reason in reasons)
+
+
+def test_explain_relative_to_peers_names_what_sets_the_stock_apart():
+    """Everyone shares the same strong CMF; only ADX separates the pick from its peers."""
+    from jarvis.features import LOCAL_FEATURES
+    from jarvis.model import explain
+
+    model = fit(SMALL, two_factor_rows(seed=0))
+    peers = two_factor_rows(seed=1).head(60).copy()
+    peers["CMF_20"] = 2.0
+    peers["ADX_14"] = np.linspace(-2.0, 2.0, len(peers))
+    pick = peers.tail(1)
+    alone = explain(model, SMALL, pick, top=1, only=LOCAL_FEATURES)
+    relative = explain(model, SMALL, pick, top=1, only=LOCAL_FEATURES, reference=peers)
+    assert alone[0][0]["feature"] == "CMF_20"
+    assert relative[0][0] == {"feature": "ADX_14", "direction": "up"}
+
+
+def test_recipe_target_defaults_to_sign_and_keeps_old_ids():
+    plain = Recipe(params=dict(SMALL.params), features=FEATURES)
+    assert plain.target == "sign" and "target" not in plain.to_dict()
+    other = Recipe(params=dict(SMALL.params), features=FEATURES, target="cs_median")
+    assert other.recipe_id != plain.recipe_id
+    assert Recipe.from_dict(other.to_dict()) == other
+    with pytest.raises(ValueError):
+        Recipe(params={}, target="nonsense")
+
+
+def test_fit_learns_the_recipes_own_target():
+    """The two targets disagree; each recipe must follow its own column."""
+    rows = synthetic_rows(seed=0)
+    rows["target_cs_median"] = 1.0 - rows["target"]
+    rows.loc[rows.index[:50], "target_cs_median"] = np.nan  # unknown labels are skipped
+    opposite = Recipe(params=dict(SMALL.params), features=FEATURES, target="cs_median")
+    test = synthetic_rows(seed=1)
+    usual = predict(fit(SMALL, rows), SMALL, test)
+    flipped = predict(fit(opposite, rows), opposite, test)
+    assert np.corrcoef(usual, flipped)[0, 1] < -0.5

@@ -60,9 +60,68 @@ def test_multiple_days_and_summary():
         "mean_top_excess": pytest.approx(0.0),
         "mean_rank_ic": pytest.approx(0.0),
         "hit_rate": pytest.approx(0.5),
+        "mean_universe_excess": pytest.approx(0.0),
+        "mean_top_vs_universe": pytest.approx(0.0),
+        "mean_bottom_excess": pytest.approx(0.0),
+        "mean_quintile_spread": None,          # three names: too few for quintiles
+        "quintile_spread_win_rate": None,
     }
 
 
 def test_summary_of_empty_scores():
     summary = summarize(daily_scores(predictions([], [])))
     assert summary == {"days": 0, "mean_top_excess": None, "mean_rank_ic": None, "hit_rate": None}
+
+
+def test_scores_from_next_open_are_reported_when_available():
+    import pandas as pd
+    from jarvis.metrics import daily_scores, summarize
+
+    day = pd.Timestamp("2026-01-05")
+    predictions = pd.DataFrame({
+        "date": [day] * 4, "ticker": list("ABCD"), "prob": [0.9, 0.8, 0.2, 0.1],
+        "fwd_excess": [0.04, 0.02, -0.01, -0.03], "fwd_excess_open": [0.01, -0.03, 0.0, 0.0],
+    })
+    scores = daily_scores(predictions, top_n=2, cost_bps=0.0)
+    assert scores.loc[day, "top_excess"] == 0.03
+    assert scores.loc[day, "top_excess_open"] == pytest.approx(-0.01)
+    summary = summarize(scores)
+    assert summary["mean_top_excess_open"] == pytest.approx(-0.01) and summary["hit_rate_open"] == 0.0
+    plain = summarize(daily_scores(predictions.drop(columns="fwd_excess_open"), top_n=2))
+    assert "mean_top_excess_open" not in plain
+
+
+def test_scores_separate_model_skill_from_the_universe():
+    import pandas as pd
+    from jarvis.metrics import daily_scores, summarize
+
+    day = pd.Timestamp("2026-01-05")
+    predictions = pd.DataFrame({
+        "date": [day] * 4, "ticker": list("ABCD"), "prob": [0.9, 0.8, 0.2, 0.1],
+        "fwd_excess": [0.01, -0.01, -0.03, -0.05],
+    })
+    scores = daily_scores(predictions, top_n=2, cost_bps=20.0)
+    assert scores.loc[day, "universe_excess"] == pytest.approx(-0.02)
+    assert scores.loc[day, "bottom_excess"] == pytest.approx(-0.04)
+    summary = summarize(scores)
+    assert summary["mean_top_excess"] == pytest.approx(-0.002)       # 0.00 minus 20 bp
+    assert summary["mean_universe_excess"] == pytest.approx(-0.02)
+    assert summary["mean_top_vs_universe"] == pytest.approx(0.02)   # picks beat the average stock
+    assert summary["mean_bottom_excess"] == pytest.approx(-0.04)
+
+
+def test_quintile_spread_compares_the_best_and_worst_fifth():
+    import pandas as pd
+    from jarvis.metrics import daily_scores, summarize
+
+    day = pd.Timestamp("2026-01-05")
+    names = [f"S{i:02d}" for i in range(10)]
+    predictions = pd.DataFrame({
+        "date": [day] * 10, "ticker": names, "prob": [1.0 - i / 10 for i in range(10)],
+        "fwd_excess": [0.04, 0.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.01, -0.03],
+    })
+    scores = daily_scores(predictions, top_n=1, cost_bps=0.0)
+    assert scores.loc[day, "quintile_spread"] == pytest.approx(0.03 - (-0.02))
+    summary = summarize(scores)
+    assert summary["mean_quintile_spread"] == pytest.approx(0.05)
+    assert summary["quintile_spread_win_rate"] == 1.0

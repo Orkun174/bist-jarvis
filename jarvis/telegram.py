@@ -23,6 +23,15 @@ FEATURE_LABELS = {
     "ADX_14": "trend gücü (ADX)",
     "CMF_20": "para akışı (CMF)",
     "StochRSI_K": "StochRSI",
+    "Rel_Return_5D": "endekse göre 5 günlük getiri",
+    "Rel_Return_20D": "endekse göre 1 aylık getiri",
+    "Rel_Return_60D": "endekse göre 3 aylık getiri",
+    "Rel_Return_120D": "endekse göre 6 aylık getiri",
+    "Volatility_20D": "oynaklık (20 gün)",
+    "High_252_Distance": "52 hafta zirvesine uzaklık",
+    "Volume_Trend": "hacim eğilimi",
+    "Beta_60D": "beta",
+    "Turnover_Rank": "işlem hacmi sırası",
 }
 MACRO_LABELS = {
     "USDTRY": "dolar/TL", "BRENT": "Brent petrol", "GOLD": "altın", "SP500": "S&P 500",
@@ -52,6 +61,8 @@ def _thousands(value: int) -> str:
 def _feature_label(feature: str) -> str:
     if feature in FEATURE_LABELS:
         return FEATURE_LABELS[feature]
+    if feature.endswith("_Rank"):  # the day's rank of a known feature reads the same
+        return _feature_label(feature[: -len("_Rank")])
     if feature.startswith("macro_"):
         return MACRO_LABELS.get(feature.split("_")[1], feature)
     return feature
@@ -79,12 +90,18 @@ def _mark(check: dict | None) -> str:
 def _unproven_line(simulated: dict | None) -> str:
     net = (simulated or {}).get("top5_net_of_cost") or {}
     if net.get("days") and net.get("mean_top_excess") is not None:
-        return (
+        text = (
             "⚠️ Model henüz kanıtlanmadı. Simülasyonda ilk 5 seçim "
             f"{net['days']} seans boyunca 5 günde endekse göre ortalama "
             f"{_percent(net['mean_top_excess'])} getirdi (maliyet düşülmüş); "
-            f"günlerin {_percent(net['hit_rate'], 0, signed=False)}'inde kazandı."
+            f"kazanan gün oranı {_percent(net['hit_rate'], 0, signed=False)}."
         )
+        if net.get("mean_quintile_spread") is not None:
+            text += (
+                " Sıralamanın geneli daha tutarlı: en iyi beşte birlik dilim, en kötü "
+                f"beşte birliği ortalama {_percent(net['mean_quintile_spread'])} geçti."
+            )
+        return text
     return "⚠️ Model henüz kanıtlanmadı; canlı karne birikene kadar bu sıralama deneme amaçlıdır."
 
 
@@ -160,6 +177,9 @@ def format_message(
             reasons = _reasons(item)
             lines.append(f"{item['rank']}. {item['ticker']}" + (f" — {reasons}" if reasons else ""))
         lines.append("(lehine/aleyhine: modelin sıralamasını en çok etkileyen etkenler)")
+        bottom = [item["ticker"] for item in daily.get("bottom") or []]
+        if bottom:
+            lines += ["", "Sıralamanın sonu (modelin en zayıf gördükleri): " + ", ".join(bottom)]
     elif health.get("ok") is False:
         lines.append("Bugün öneri yok: model sağlık kontrolünü geçemedi.")
     else:

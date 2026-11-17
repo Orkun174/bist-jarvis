@@ -14,6 +14,7 @@ import pandas as pd
 from xgboost import XGBClassifier
 
 from jarvis.config import RANDOM_SEED, TRAIN_YEARS
+from jarvis.dataset import TARGET_COLUMNS
 from jarvis.features import FEATURE_VERSION, FEATURES
 
 
@@ -22,13 +23,25 @@ class Recipe:
     params: dict = field(hash=False)
     features: tuple[str, ...] = FEATURES
     train_years: int = TRAIN_YEARS
+    target: str = "sign"
+
+    def __post_init__(self) -> None:
+        if self.target not in TARGET_COLUMNS:
+            raise ValueError(f"unknown target: {self.target}")
+
+    @property
+    def target_column(self) -> str:
+        return TARGET_COLUMNS[self.target]
 
     def to_dict(self) -> dict:
-        return {
+        data = {
             "params": dict(self.params),
             "features": list(self.features),
             "train_years": self.train_years,
         }
+        if self.target != "sign":  # left out by default so existing recipe ids stay the same
+            data["target"] = self.target
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> "Recipe":
@@ -36,6 +49,7 @@ class Recipe:
             params=dict(data["params"]),
             features=tuple(data["features"]),
             train_years=int(data.get("train_years", TRAIN_YEARS)),
+            target=data.get("target", "sign"),
         )
 
     @property
@@ -73,9 +87,15 @@ def new_classifier(recipe: Recipe) -> XGBClassifier:
     )
 
 
+def trainable(recipe: Recipe, train: pd.DataFrame) -> bool:
+    """Both outcomes of the recipe's target are present."""
+    return train[recipe.target_column].nunique() == 2
+
+
 def fit(recipe: Recipe, train: pd.DataFrame) -> XGBClassifier:
+    train = train[train[recipe.target_column].notna()]
     model = new_classifier(recipe)
-    model.fit(_matrix(recipe, train), train["target"].astype(int))
+    model.fit(_matrix(recipe, train), train[recipe.target_column].astype(int))
     return model
 
 
@@ -125,23 +145,41 @@ def load_model(root: Path | str) -> tuple[XGBClassifier, Recipe, dict] | None:
     return model, recipe, meta
 
 
+def _contributions(model: XGBClassifier, recipe: Recipe, rows: pd.DataFrame) -> np.ndarray:
+    import xgboost
+
+    matrix = xgboost.DMatrix(_matrix(recipe, rows), feature_names=list(recipe.features))
+    return model.get_booster().predict(matrix, pred_contribs=True)[:, :-1]  # drop bias
+
+
 def explain(
-    model: XGBClassifier, recipe: Recipe, rows: pd.DataFrame, top: int = 2
+    model: XGBClassifier,
+    recipe: Recipe,
+    rows: pd.DataFrame,
+    top: int = 2,
+    only: tuple[str, ...] | None = None,
+    reference: pd.DataFrame | None = None,
 ) -> list[list[dict]]:
     """For each row, the `top` features that moved its score most, with direction.
 
     Uses XGBoost's own per-prediction contributions (log-odds); "up" means the
     feature raised this stock's score, "down" that it lowered it.
+
+    `only` restricts the answer to a subset of features (e.g. the stock-specific
+    ones: macro features are identical for every stock on a given day and cannot
+    explain a ranking). `reference` is a set of peer rows; contributions are then
+    measured against the peers' average, so the answer names what sets the stock
+    apart from them rather than what all of them share.
     """
     if rows.empty:
         return []
-    import xgboost
-
-    matrix = xgboost.DMatrix(_matrix(recipe, rows), feature_names=list(recipe.features))
-    contributions = model.get_booster().predict(matrix, pred_contribs=True)[:, :-1]  # drop bias
+    contributions = _contributions(model, recipe, rows)
+    if reference is not None and not reference.empty:
+        contributions = contributions - _contributions(model, recipe, reference).mean(axis=0)
+    allowed = [i for i, name in enumerate(recipe.features) if only is None or name in only]
     result = []
     for values in contributions:
-        order = np.argsort(-np.abs(values))[:top]
+        order = sorted(allowed, key=lambda i: -abs(values[i]))[:top]
         result.append(
             [
                 {"feature": recipe.features[i], "direction": "up" if values[i] > 0 else "down"}

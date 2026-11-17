@@ -193,7 +193,87 @@ def test_search_promotes_only_through_gate(tmp_path, monkeypatch):
     result = run_search(tmp_path, AS_OF, candidates=2, download=None)
     assert result["promoted"] is False and recipe_path.read_text(encoding="utf-8") == before
     monkeypatch.setattr(train_module, "compare_recipes", lambda a, b: {"promote": True, "days": 10})
+    monkeypatch.setattr(train_module, "confirm_recipes", lambda a, b: {"ok": False, "days": 15})
+    result = run_search(tmp_path, AS_OF, candidates=2, download=None)
+    assert result["promoted"] is False and result["confirmation"] == {"ok": False, "days": 15}
+    assert recipe_path.read_text(encoding="utf-8") == before  # the long window said no
+    monkeypatch.setattr(train_module, "confirm_recipes", lambda a, b: {"ok": True, "days": 15})
     result = run_search(tmp_path, AS_OF, candidates=2, download=None)
     assert result["promoted"] is True
     assert Recipe.from_dict(json.loads(recipe_path.read_text(encoding="utf-8"))).recipe_id == result["challenger_recipe_id"]
     assert (tmp_path / "models" / "search" / "2026-11-13.json").exists()
+
+
+def test_structural_variants_cover_other_targets_and_extra_features():
+    from jarvis.features import FEATURE_SETS
+    from jarvis.train import structural_variants
+
+    variants = structural_variants(SMALL)
+    described = {(recipe.target, recipe.features) for recipe in variants}
+    targets = ("sign", "cs_median", "risk_adjusted")
+    expected = {(target, features) for target in targets for features in (FEATURES, *FEATURE_SETS)}
+    assert described == expected - {("sign", FEATURES)}
+    assert all(recipe.params == SMALL.params for recipe in variants)
+    assert SMALL.recipe_id not in {recipe.recipe_id for recipe in variants}
+
+
+def test_search_tries_structural_variants_first(tmp_path, monkeypatch):
+    prepare(tmp_path)
+    monkeypatch.setattr(train_module, "compare_recipes", lambda a, b: {"promote": True, "days": 10})
+    monkeypatch.setattr(train_module, "confirm_recipes", lambda a, b: {"ok": True, "days": 15})
+    result = run_search(tmp_path, AS_OF, candidates=5, download=None)
+    saved = json.loads((tmp_path / "models" / "search" / "2026-11-13.json").read_text(encoding="utf-8"))
+    assert [trial["target"] for trial in saved["trials"][:2]] == ["cs_median", "risk_adjusted"]
+    assert {trial["features"] for trial in saved["trials"]} == {24, 33}
+    assert len(saved["trials"]) == 5
+    promoted = Recipe.from_dict(json.loads((tmp_path / "models" / "recipe.json").read_text(encoding="utf-8")))
+    assert promoted.recipe_id == result["challenger_recipe_id"]
+    assert daily(tmp_path)["status"] == "ok"  # the promoted recipe trains and predicts
+
+
+def test_compare_reports_periods_and_a_shuffled_control(tmp_path):
+    from jarvis.compare import compare, recipe_from_exam, shuffled_labels
+    from jarvis.train import _prepare
+
+    prepare(tmp_path)
+    _, _, _, _, calendar, rows, _ = _prepare(tmp_path, AS_OF, None)
+    challenger = Recipe(params=dict(SMALL.params), features=FEATURES, target="cs_median")
+
+    shuffled = shuffled_labels(rows, "target_cs_median")
+    assert not shuffled["target_cs_median"].equals(rows["target_cs_median"])
+    by_day = lambda frame: frame.groupby("date")["target_cs_median"].sum()
+    pd.testing.assert_series_equal(by_day(shuffled), by_day(rows))  # only moved within the day
+
+    result = compare(rows, calendar, SMALL, challenger, sessions=30)
+    assert set(result["periods"]) == {"earlier", "selection", "exam"}
+    assert set(result["overall"]) == {"champion", "challenger", "challenger_shuffled"}
+    assert result["overall"]["champion"]["days"] > 0
+    # 30 sessions, the last 5 still ungraded: all 25 fall inside the 60-session exam window.
+    assert result["periods"]["exam"]["champion"]["days"] == 25
+    assert result["periods"]["earlier"]["champion"]["days"] == 0
+
+    exam = tmp_path / "exam.json"
+    exam.write_text(json.dumps({"challenger_recipe_id": challenger.recipe_id, "trials": [
+        {"params": challenger.params, "target": "cs_median"}]}), encoding="utf-8")
+    assert recipe_from_exam(exam) == challenger
+    with pytest.raises(ValueError):
+        recipe_from_exam(exam, "missing")
+
+
+def test_daily_result_carries_the_bottom_of_a_large_enough_ranking(tmp_path, monkeypatch):
+    prepare(tmp_path, tickers=24)
+    monkeypatch.setattr(train_module, "health_check", lambda scores: {"ok": True})
+    assert daily(tmp_path)["status"] == "ok"
+    result = json.loads((tmp_path / "daily" / "2026-11-13.json").read_text(encoding="utf-8"))
+    ledger = read_ledger(Store(tmp_path))
+    worst_first = list(ledger.sort_values("rank", ascending=False)["ticker"].head(5))
+    assert [item["ticker"] for item in result["bottom"]] == worst_first
+    assert not set(worst_first) & {item["ticker"] for item in result["recommendations"]}
+
+
+def test_no_bottom_list_for_a_small_ranking(tmp_path, monkeypatch):
+    prepare(tmp_path, tickers=12)
+    monkeypatch.setattr(train_module, "health_check", lambda scores: {"ok": True})
+    daily(tmp_path)
+    result = json.loads((tmp_path / "daily" / "2026-11-13.json").read_text(encoding="utf-8"))
+    assert result["bottom"] == []

@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 import pandas as pd
 
@@ -20,8 +21,9 @@ def test_clearly_better_challenger_is_promoted():
     result = compare_recipes(champion, challenger)
     assert result["promote"] is True
     assert result["days"] == 60
-    assert result["top_excess_diff"] > 0 and result["rank_ic_diff"] > 0
-    assert result["p_top_excess"] >= 0.8 and result["p_rank_ic"] >= 0.8
+    assert result["pick_metric"] == "top_excess"  # these scores have no quintile spread
+    assert result["pick_diff"] > 0 and result["rank_ic_diff"] > 0
+    assert result["p_pick"] >= 0.8 and result["p_rank_ic"] >= 0.8
 
 
 def test_equal_recipes_are_not_promoted():
@@ -103,3 +105,42 @@ def test_drift_without_previous_model_passes():
 def test_drift_too_few_names_passes():
     result = drift_check(series([0.4, 0.6]), series([0.6, 0.4]))
     assert result["ok"] is True and result["reason"] == "too_few_names"
+
+
+def test_confirmation_needs_both_metrics_ahead_over_the_long_window():
+    import numpy as np
+    import pandas as pd
+    from jarvis.gate import confirm_recipes
+
+    days = pd.bdate_range("2026-01-01", periods=100)
+    rng = np.random.default_rng(0)
+    base = pd.DataFrame({"top_excess": rng.normal(0, 0.03, 100), "rank_ic": rng.normal(0.05, 0.1, 100)}, index=days)
+    better = base + [0.002, 0.02]
+    assert confirm_recipes(base, better)["ok"] is True
+    lucky_ranker = base + [-0.002, 0.02]           # ranks better, picks worse
+    verdict = confirm_recipes(base, lucky_ranker)
+    assert verdict["ok"] is False and verdict["top_excess_diff"] == pytest.approx(-0.002)
+    assert confirm_recipes(base.head(10), better.head(10)) == {"ok": False, "days": 10, "reason": "too_few_days"}
+
+
+def test_exam_uses_the_quintile_spread_when_available():
+    """A challenger with noisy, slightly worse top picks but a clearly better ranking passes."""
+    champion = scores(noisy(0.000, 1), noisy(0.00, 2))
+    challenger = scores(noisy(-0.001, 3, scale=0.03), noisy(0.02, 4))
+    champion["quintile_spread"] = noisy(0.005, 5)
+    challenger["quintile_spread"] = noisy(0.015, 6)
+    result = compare_recipes(champion, challenger)
+    assert result["pick_metric"] == "quintile_spread" and result["promote"] is True
+    challenger["quintile_spread"] = noisy(-0.005, 6)  # ranking worse: no promotion
+    assert compare_recipes(champion, challenger)["promote"] is False
+
+
+def test_confirmation_also_needs_a_better_quintile_spread():
+    from jarvis.gate import confirm_recipes
+
+    days = pd.bdate_range("2026-01-01", periods=100)
+    rng = np.random.default_rng(1)
+    base = pd.DataFrame({"top_excess": rng.normal(0, 0.03, 100), "rank_ic": rng.normal(0.05, 0.1, 100),
+                         "quintile_spread": rng.normal(0.01, 0.02, 100)}, index=days)
+    assert confirm_recipes(base, base + [0.0, 0.02, 0.003])["ok"] is True      # picks equal, ranking better
+    assert confirm_recipes(base, base + [0.001, 0.02, -0.003])["ok"] is False  # spread worse

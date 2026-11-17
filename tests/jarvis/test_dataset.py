@@ -2,8 +2,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from jarvis.dataset import build_rows, prediction_slice, training_slice
-from jarvis.features import FEATURES, LOCAL_FEATURES, VIX_PERCENTILE
+from jarvis.dataset import TARGET_COLUMNS, build_rows, prediction_slice, training_slice
+from jarvis.features import (
+    EXTRA_FEATURES, FEATURES, LOCAL_FEATURES, RANKED_FEATURES, VIX_PERCENTILE,
+)
 from jarvis.store import Store
 from tests.jarvis.synthetic import CALENDAR, SESSION, build_market, random_ohlcv
 
@@ -18,8 +20,10 @@ def market(tmp_path_factory):
 
 def test_columns(market):
     rows = market[3]
-    expected = ["ticker", "date", *FEATURES, VIX_PERCENTILE, "close", "eligible_pit",
-                "fwd_excess", "target", "label_end"]
+    ranked = [name for name in RANKED_FEATURES if name not in EXTRA_FEATURES]
+    expected = ["ticker", "date", *FEATURES, *EXTRA_FEATURES, *ranked, VIX_PERCENTILE, "close",
+                "eligible_pit", "fwd_excess", "fwd_excess_open", "target", "target_cs_median",
+                "target_risk_adjusted", "label_end"]
     assert list(rows.columns) == expected
     assert rows[list(LOCAL_FEATURES)].notna().all().all()
     assert rows["date"].max() == SESSION
@@ -78,7 +82,8 @@ def test_no_lookahead_in_features(tmp_path, market):
     cutoff = CALENDAR[-31]
     left = rows[rows["date"] <= cutoff].reset_index(drop=True)
     right = changed[changed["date"] <= cutoff].reset_index(drop=True)
-    pd.testing.assert_frame_equal(left[["ticker", "date", *FEATURES]], right[["ticker", "date", *FEATURES]])
+    columns = ["ticker", "date", *FEATURES, *EXTRA_FEATURES, *RANKED_FEATURES]
+    pd.testing.assert_frame_equal(left[columns], right[columns])
 
 
 def test_ticker_missing_bar_at_horizon_has_nan_label(tmp_path):
@@ -111,3 +116,53 @@ def test_prediction_slice_only_todays_eligible(market):
     today = prediction_slice(rows, SESSION, {"S00", "S03", "NOPE"})
     assert sorted(today["ticker"]) == ["S00", "S03"]
     assert (today["date"] == SESSION).all()
+
+
+def test_cs_median_target_compares_with_the_days_median_eligible_stock(market):
+    rows = market[3]
+    day = rows[(rows["date"] == CALENDAR[300]) & rows["eligible_pit"].astype(bool)]
+    assert len(day) >= 3
+    median = day["fwd_excess"].median()
+    expected = (day["fwd_excess"] > median).astype(float)
+    assert (day[TARGET_COLUMNS["cs_median"]] == expected).all()
+
+
+def test_risk_adjusted_target_divides_by_recent_volatility(market):
+    rows = market[3]
+    day = rows[(rows["date"] == CALENDAR[300]) & rows["eligible_pit"].astype(bool)]
+    scaled = day["fwd_excess"] / day["Volatility_20D"]
+    expected = (scaled > scaled.median()).astype(float)
+    assert (day[TARGET_COLUMNS["risk_adjusted"]] == expected).all()
+
+
+def test_alternative_targets_are_unknown_where_the_outcome_is(market):
+    rows = market[3]
+    tail = rows[rows["date"] > CALENDAR[-6]]
+    for column in TARGET_COLUMNS.values():
+        assert tail[column].isna().all()
+
+
+def test_turnover_rank_is_a_share_within_the_day(market):
+    rows = market[3]
+    day = rows[rows["date"] == CALENDAR[300]]
+    assert day["Turnover_Rank"].between(0, 1).all() and day["Turnover_Rank"].max() == 1.0
+
+
+def test_ranked_features_rank_eligible_stocks_within_the_day(market):
+    rows = market[3]
+    day = rows[rows["date"] == CALENDAR[300]]
+    eligible = day[day["eligible_pit"].astype(bool)]
+    expected = eligible["CMF_20"].rank(pct=True)
+    assert (eligible["CMF_20_Rank"] == expected).all()
+    assert day[~day["eligible_pit"].astype(bool)]["CMF_20_Rank"].isna().all()
+
+
+def test_outcome_from_next_open_is_what_a_buyer_after_the_message_gets(market):
+    store, names, macros, rows = market
+    day, entry, later = CALENDAR[300], CALENDAR[301], CALENDAR[305]
+    stock, index = store.read_prices("S01"), macros["BIST100"]
+    expected = (stock["Close"][later] / stock["Open"][entry] - 1.0) - (
+        index["Close"][later] / index["Open"][entry] - 1.0)
+    row = rows[(rows["ticker"] == "S01") & (rows["date"] == day)].iloc[0]
+    assert row["fwd_excess_open"] == pytest.approx(expected)
+    assert rows[rows["date"] > CALENDAR[-6]]["fwd_excess_open"].isna().all()

@@ -1,0 +1,415 @@
+{
+  "candidates": 18,
+  "challenger_exam": {
+    "days": 60,
+    "hit_rate": 0.6,
+    "mean_rank_ic": 0.1997638443112624,
+    "mean_top_excess": 0.004418506683371412
+  },
+  "challenger_recipe_id": "1c0fcbb0ca",
+  "champion_exam": {
+    "days": 60,
+    "hit_rate": 0.43333333333333335,
+    "mean_rank_ic": 0.08584688268893288,
+    "mean_top_excess": -0.0006719997938020782
+  },
+  "champion_recipe_id": "001bde800d",
+  "exam": {
+    "days": 60,
+    "p_rank_ic": 1.0,
+    "p_top_excess": 0.809,
+    "promote": true,
+    "rank_ic_diff": 0.11391696162232949,
+    "top_excess_diff": 0.00509050647717349
+  },
+  "promoted": true,
+  "session": "2026-11-16",
+  "status": "ok",
+  "trials": [
+    {
+      "features": 24,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "fda322eefe",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.45,
+        "mean_rank_ic": 0.08110725170178493,
+        "mean_top_excess": -0.0018305715768514863
+      },
+      "target": "cs_median"
+    },
+    {
+      "features": 24,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "91e3679870",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.45,
+        "mean_rank_ic": 0.07372337549626137,
+        "mean_top_excess": -0.0032111540824106334
+      },
+      "target": "risk_adjusted"
+    },
+    {
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "6293327b15",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5,
+        "mean_rank_ic": 0.06639459116149361,
+        "mean_top_excess": 0.0009739858998701679
+      },
+      "target": "sign"
+    },
+    {
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "7795495e95",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.38333333333333336,
+        "mean_rank_ic": 0.07893209167582914,
+        "mean_top_excess": -0.00410841345646617
+      },
+      "target": "cs_median"
+    },
+    {
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "89e48498b2",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5,
+        "mean_rank_ic": 0.07194046844506212,
+        "mean_top_excess": -0.0012797518000373534
+      },
+      "target": "risk_adjusted"
+    },
+    {
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "854bef0d22",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.38333333333333336,
+        "mean_rank_ic": 0.07078668597668299,
+        "mean_top_excess": -0.006621216927866511
+      },
+      "target": "sign"
+    },
+    {
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "1c0fcbb0ca",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.45,
+        "mean_rank_ic": 0.08468405291088454,
+        "mean_top_excess": -0.003865145118426863
+      },
+      "target": "cs_median"
+    },
+    {
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "e335209ccd",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5,
+        "mean_rank_ic": 0.07810573750337214,
+        "mean_top_excess": -0.0029551682423246397
+      },
+      "target": "risk_adjusted"
+    },
+    {
+      "features": 19,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "11fb2a3ef9",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5333333333333333,
+        "mean_rank_ic": 0.07866720795601166,
+        "mean_top_excess": 0.004952845542196499
+      },
+      "target": "sign"
+    },
+    {
+      "features": 19,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "57ab0205f6",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5166666666666667,
+        "mean_rank_ic": 0.07978886447022425,
+        "mean_top_excess": -0.0018243465220147514
+      },
+      "target": "cs_median"
+    },
+    {
+      "features": 19,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "dfeadfdd39",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.48333333333333334,
+        "mean_rank_ic": 0.07524924859730397,
+        "mean_top_excess": -0.004412480169446128
+      },
+      "target": "risk_adjusted"
+    },
+    {
+      "features": 33,
+      "params": {
+        "colsample_bylevel": 0.9390327734358291,
+        "colsample_bytree": 0.6521502169883483,
+        "learning_rate": 0.017411285654420693,
+        "max_depth": 7,
+        "min_child_weight": 2.573748950474727,
+        "n_estimators": 250,
+        "reg_alpha": 0.24952947448441398,
+        "reg_lambda": 0.3076674930238752,
+        "subsample": 0.7557254935336051
+      },
+      "recipe_id": "fa9c2985ee",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5333333333333333,
+        "mean_rank_ic": 0.07274132774013722,
+        "mean_top_excess": 0.002277984649426136
+      },
+      "target": "sign"
+    },
+    {
+      "features": 33,
+      "params": {
+        "colsample_bylevel": 0.9524435587663758,
+        "colsample_bytree": 0.9245169631172963,
+        "learning_rate": 0.013728542754001077,
+        "max_depth": 5,
+        "min_child_weight": 1.4861787192007108,
+        "n_estimators": 200,
+        "reg_alpha": 0.9601931934568931,
+        "reg_lambda": 1.9381884649135837,
+        "subsample": 0.6869957621594887
+      },
+      "recipe_id": "22ac773ebe",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.36666666666666664,
+        "mean_rank_ic": 0.07090858372432048,
+        "mean_top_excess": -0.0037420185231964664
+      },
+      "target": "risk_adjusted"
+    },
+    {
+      "features": 19,
+      "params": {
+        "colsample_bylevel": 0.9620358532736621,
+        "colsample_bytree": 0.957000712722137,
+        "learning_rate": 0.052574539787440186,
+        "max_depth": 3,
+        "min_child_weight": 2.144208257641785,
+        "n_estimators": 350,
+        "reg_alpha": 0.8993559452746465,
+        "reg_lambda": 1.2488896722651779,
+        "subsample": 0.650459745247401
+      },
+      "recipe_id": "168606c62d",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5666666666666667,
+        "mean_rank_ic": 0.07520422443837543,
+        "mean_top_excess": 0.0025242181243240887
+      },
+      "target": "sign"
+    },
+    {
+      "features": 24,
+      "params": {
+        "colsample_bylevel": 0.690860999560786,
+        "colsample_bytree": 0.6008997132496429,
+        "learning_rate": 0.07026731590885377,
+        "max_depth": 6,
+        "min_child_weight": 2.1351577049451596,
+        "n_estimators": 600,
+        "reg_alpha": 0.4402890158908941,
+        "reg_lambda": 1.7531644049050543,
+        "subsample": 0.9040198844387716
+      },
+      "recipe_id": "b2313ce646",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.4,
+        "mean_rank_ic": 0.06331333260261417,
+        "mean_top_excess": 0.00015055013263598054
+      },
+      "target": "sign"
+    },
+    {
+      "features": 24,
+      "params": {
+        "colsample_bylevel": 0.972129949810736,
+        "colsample_bytree": 0.8689638748949445,
+        "learning_rate": 0.0221306030149677,
+        "max_depth": 4,
+        "min_child_weight": 3.2554960182305623,
+        "n_estimators": 200,
+        "reg_alpha": 0.9327976210344983,
+        "reg_lambda": 0.17314608599879033,
+        "subsample": 0.9078783386392519
+      },
+      "recipe_id": "f007b633bd",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.55,
+        "mean_rank_ic": 0.05864988215903379,
+        "mean_top_excess": -0.000108927253819163
+      },
+      "target": "sign"
+    },
+    {
+      "features": 24,
+      "params": {
+        "colsample_bylevel": 0.6422602877276848,
+        "colsample_bytree": 0.7446152965664935,
+        "learning_rate": 0.012908990129833212,
+        "max_depth": 6,
+        "min_child_weight": 4.77309670568097,
+        "n_estimators": 200,
+        "reg_alpha": 0.03985491236926175,
+        "reg_lambda": 1.8358431995104412,
+        "subsample": 0.9057501245984995
+      },
+      "recipe_id": "c62d27e69a",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.4666666666666667,
+        "mean_rank_ic": 0.05949233304317868,
+        "mean_top_excess": 0.000635834098291571
+      },
+      "target": "sign"
+    },
+    {
+      "features": 19,
+      "params": {
+        "colsample_bylevel": 0.6368847832594983,
+        "colsample_bytree": 0.9769469685199168,
+        "learning_rate": 0.013494152008226283,
+        "max_depth": 6,
+        "min_child_weight": 4.777731893392664,
+        "n_estimators": 450,
+        "reg_alpha": 0.9219637404023114,
+        "reg_lambda": 0.7873191572226645,
+        "subsample": 0.6281042567239149
+      },
+      "recipe_id": "3edd2605fd",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5,
+        "mean_rank_ic": 0.07019516234749355,
+        "mean_top_excess": -0.0025351250469319376
+      },
+      "target": "risk_adjusted"
+    }
+  ]
+}

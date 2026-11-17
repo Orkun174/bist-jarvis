@@ -1,0 +1,251 @@
+{
+  "champion": {
+    "params": {
+      "n_estimators": 300,
+      "max_depth": 4,
+      "learning_rate": 0.03,
+      "min_child_weight": 3.0,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "reg_alpha": 0.1,
+      "reg_lambda": 1.0
+    },
+    "features": [
+      "EMA20_Distance",
+      "EMA50_Distance",
+      "Volume_Surge",
+      "RSI_Momentum_5D",
+      "Relative_Return_1D",
+      "MACD_Normalized",
+      "ATR_Normalized",
+      "ADX_14",
+      "CMF_20",
+      "StochRSI_K",
+      "macro_USDTRY_1d_lag",
+      "macro_USDTRY_5d_mean_lag",
+      "macro_BRENT_1d_lag",
+      "macro_BRENT_5d_mean_lag",
+      "macro_GOLD_1d_lag",
+      "macro_GOLD_5d_mean_lag",
+      "macro_SP500_1d_lag",
+      "macro_SP500_5d_mean_lag",
+      "macro_VIX_1d_lag",
+      "macro_VIX_5d_mean_lag",
+      "macro_BIST100_1d_lag",
+      "macro_BIST100_5d_mean_lag",
+      "macro_BISTBANK_1d_lag",
+      "macro_BISTBANK_5d_mean_lag"
+    ],
+    "train_years": 3,
+    "recipe_id": "001bde800d"
+  },
+  "challenger": {
+    "params": {
+      "colsample_bytree": 0.8,
+      "learning_rate": 0.03,
+      "max_depth": 4,
+      "min_child_weight": 3.0,
+      "n_estimators": 300,
+      "reg_alpha": 0.1,
+      "reg_lambda": 1.0,
+      "subsample": 0.8
+    },
+    "features": [
+      "EMA20_Distance_Rank",
+      "EMA50_Distance_Rank",
+      "Volume_Surge_Rank",
+      "RSI_Momentum_5D_Rank",
+      "Relative_Return_1D_Rank",
+      "MACD_Normalized_Rank",
+      "ATR_Normalized_Rank",
+      "ADX_14_Rank",
+      "CMF_20_Rank",
+      "StochRSI_K_Rank",
+      "Rel_Return_5D_Rank",
+      "Rel_Return_20D_Rank",
+      "Rel_Return_60D_Rank",
+      "Rel_Return_120D_Rank",
+      "Volatility_20D_Rank",
+      "High_252_Distance_Rank",
+      "Volume_Trend_Rank",
+      "Beta_60D_Rank",
+      "Turnover_Rank",
+      "macro_USDTRY_1d_lag",
+      "macro_USDTRY_5d_mean_lag",
+      "macro_BRENT_1d_lag",
+      "macro_BRENT_5d_mean_lag",
+      "macro_GOLD_1d_lag",
+      "macro_GOLD_5d_mean_lag",
+      "macro_SP500_1d_lag",
+      "macro_SP500_5d_mean_lag",
+      "macro_VIX_1d_lag",
+      "macro_VIX_5d_mean_lag",
+      "macro_BIST100_1d_lag",
+      "macro_BIST100_5d_mean_lag",
+      "macro_BISTBANK_1d_lag",
+      "macro_BISTBANK_5d_mean_lag"
+    ],
+    "train_years": 3,
+    "target": "cs_median",
+    "recipe_id": "1c0fcbb0ca"
+  },
+  "overall": {
+    "champion": {
+      "days": 245,
+      "mean_top_excess": -0.0005566486983588229,
+      "mean_rank_ic": 0.07337218960015274,
+      "hit_rate": 0.4530612244897959,
+      "mean_universe_excess": -0.00494457651727322,
+      "mean_top_vs_universe": 0.0063879278189144,
+      "mean_bottom_excess": -0.01880397268019366,
+      "mean_quintile_spread": 0.009543008180539918,
+      "quintile_spread_win_rate": 0.7183673469387755,
+      "mean_top_excess_open": -0.0014283013488292392,
+      "hit_rate_open": 0.43673469387755104
+    },
+    "challenger": {
+      "days": 245,
+      "mean_top_excess": -0.002272940859357934,
+      "mean_rank_ic": 0.12034138819040542,
+      "hit_rate": 0.46122448979591835,
+      "mean_universe_excess": -0.00494457651727322,
+      "mean_top_vs_universe": 0.004671635657915287,
+      "mean_bottom_excess": -0.026314105596622655,
+      "mean_quintile_spread": 0.012885114854880685,
+      "quintile_spread_win_rate": 0.710204081632653,
+      "mean_top_excess_open": -0.002522421803000766,
+      "hit_rate_open": 0.4489795918367347
+    },
+    "challenger_shuffled": {
+      "days": 245,
+      "mean_top_excess": -0.012281725034664258,
+      "mean_rank_ic": -0.02580876545094363,
+      "hit_rate": 0.35918367346938773,
+      "mean_universe_excess": -0.00494457651727322,
+      "mean_top_vs_universe": -0.005337148517391033,
+      "mean_bottom_excess": 0.0023252734185591553,
+      "mean_quintile_spread": -0.004805689204671336,
+      "quintile_spread_win_rate": 0.4122448979591837,
+      "mean_top_excess_open": -0.012863484783330157,
+      "hit_rate_open": 0.34285714285714286
+    }
+  },
+  "overall_verdict": {
+    "promote": false,
+    "days": 245,
+    "top_excess_diff": -0.0017162921609991115,
+    "rank_ic_diff": 0.046969198590252705,
+    "p_top_excess": 0.239,
+    "p_rank_ic": 1.0
+  },
+  "periods": {
+    "earlier": {
+      "champion": {
+        "days": 125,
+        "mean_top_excess": -0.002232505094421398,
+        "mean_rank_ic": 0.0703328162893858,
+        "hit_rate": 0.424,
+        "mean_universe_excess": -0.003563427249431792,
+        "mean_top_vs_universe": 0.003330922155010396,
+        "mean_bottom_excess": -0.01653651102750651,
+        "mean_quintile_spread": 0.007125047437532663,
+        "quintile_spread_win_rate": 0.712,
+        "mean_top_excess_open": -0.002743358014458258,
+        "hit_rate_open": 0.4
+      },
+      "challenger": {
+        "days": 125,
+        "mean_top_excess": -0.004720577635514933,
+        "mean_rank_ic": 0.09933413018656413,
+        "hit_rate": 0.4,
+        "mean_universe_excess": -0.003563427249431792,
+        "mean_top_vs_universe": 0.0008428496139168591,
+        "mean_bottom_excess": -0.023549030005169207,
+        "mean_quintile_spread": 0.007541095094044292,
+        "quintile_spread_win_rate": 0.68,
+        "mean_top_excess_open": -0.0045347008938298695,
+        "hit_rate_open": 0.408
+      },
+      "verdict": {
+        "promote": false,
+        "days": 125,
+        "top_excess_diff": -0.0024880725410935368,
+        "rank_ic_diff": 0.029001313897178332,
+        "p_top_excess": 0.2535,
+        "p_rank_ic": 1.0
+      }
+    },
+    "selection": {
+      "champion": {
+        "days": 60,
+        "mean_top_excess": 0.0030500698888814644,
+        "mean_rank_ic": 0.06722952424213702,
+        "hit_rate": 0.5333333333333333,
+        "mean_universe_excess": -0.005503051113005025,
+        "mean_top_vs_universe": 0.01055312100188649,
+        "mean_bottom_excess": -0.01654840109082042,
+        "mean_quintile_spread": 0.009649952988143544,
+        "quintile_spread_win_rate": 0.6833333333333333,
+        "mean_top_excess_open": 0.002171997056018,
+        "hit_rate_open": 0.5166666666666667
+      },
+      "challenger": {
+        "days": 60,
+        "mean_top_excess": -0.003865145118426863,
+        "mean_rank_ic": 0.08468405291088454,
+        "hit_rate": 0.45,
+        "mean_universe_excess": -0.005503051113005025,
+        "mean_top_vs_universe": 0.0036379059945781623,
+        "mean_bottom_excess": -0.024164251432789226,
+        "mean_quintile_spread": 0.005957355496832804,
+        "quintile_spread_win_rate": 0.65,
+        "mean_top_excess_open": -0.003881875532885432,
+        "hit_rate_open": 0.4
+      },
+      "verdict": {
+        "promote": false,
+        "days": 60,
+        "top_excess_diff": -0.006915215007308326,
+        "rank_ic_diff": 0.01745452866874754,
+        "p_top_excess": 0.0195,
+        "p_rank_ic": 0.92
+      }
+    },
+    "exam": {
+      "champion": {
+        "days": 60,
+        "mean_top_excess": -0.0006719997938020782,
+        "mean_rank_ic": 0.08584688268893288,
+        "hit_rate": 0.43333333333333335,
+        "mean_universe_excess": -0.0072634962295443925,
+        "mean_top_vs_universe": 0.008591496435742313,
+        "mean_bottom_excess": -0.025783422712665146,
+        "mean_quintile_spread": 0.014473481587534743,
+        "quintile_spread_win_rate": 0.7666666666666667,
+        "mean_top_excess_open": -0.002288898366949357,
+        "hit_rate_open": 0.43333333333333335
+      },
+      "challenger": {
+        "days": 60,
+        "mean_top_excess": 0.004418506683371412,
+        "mean_rank_ic": 0.1997638443112624,
+        "hit_rate": 0.6,
+        "mean_universe_excess": -0.0072634962295443925,
+        "mean_top_vs_universe": 0.013682002912915802,
+        "mean_bottom_excess": -0.03422453390931744,
+        "mean_quintile_spread": 0.030946248714671054,
+        "quintile_spread_win_rate": 0.8333333333333334,
+        "mean_top_excess_open": 0.0030292800327778634,
+        "hit_rate_open": 0.5833333333333334
+      },
+      "verdict": {
+        "promote": true,
+        "days": 60,
+        "top_excess_diff": 0.00509050647717349,
+        "rank_ic_diff": 0.11391696162232949,
+        "p_top_excess": 0.809,
+        "p_rank_ic": 1.0
+      }
+    }
+  }
+}

@@ -74,7 +74,8 @@ def test_reasons_separate_supporting_and_opposing_factors():
 def test_message_states_that_the_model_is_unproven():
     text = format_message(DAILY, QUALITY, LIVE_EMPTY, SIMULATED)
     assert "Model henüz kanıtlanmadı" in text
-    assert "245 seans" in text and "%+0,04" in text and "%47" in text
+    assert "245 seans" in text and "%+0,04" in text and "kazanan gün oranı %47" in text
+    assert "'inde" not in text
 
 
 def test_message_live_scorecard_empty_and_filled():
@@ -205,3 +206,25 @@ def test_notify_still_reports_when_nothing_was_produced(tmp_path, monkeypatch):
     text = notify(tmp_path, AS_OF, sender=lambda token, chat, message: sent.append(message))
     assert "Bugün için model sonucu üretilemedi" in text and "16 Kasım 2026" in text
     assert len(sent) == 1
+
+
+def test_ranked_feature_reads_like_the_feature_it_ranks():
+    from jarvis.telegram import _feature_label
+
+    assert _feature_label("CMF_20_Rank") == _feature_label("CMF_20")
+    assert _feature_label("Rel_Return_60D_Rank") == "endekse göre 3 aylık getiri"
+    assert _feature_label("Turnover_Rank") == "işlem hacmi sırası"
+
+
+def test_message_lists_the_bottom_of_the_ranking_when_present():
+    daily = {**DAILY, "bottom": [{"ticker": "ZZZ", "rank": 89}, {"ticker": "YYY", "rank": 88}]}
+    text = format_message(daily, QUALITY, LIVE_EMPTY, SIMULATED)
+    assert "Sıralamanın sonu (modelin en zayıf gördükleri): ZZZ, YYY" in text
+    assert "Sıralamanın sonu" not in format_message(DAILY, QUALITY, LIVE_EMPTY, SIMULATED)
+
+
+def test_unproven_line_adds_the_quintile_spread_when_known():
+    simulated = {"top5_net_of_cost": {**SIMULATED["top5_net_of_cost"], "mean_quintile_spread": 0.0095}}
+    text = format_message(DAILY, QUALITY, LIVE_EMPTY, simulated)
+    assert "en kötü beşte birliği ortalama %+0,95 geçti" in text
+    assert "beşte bir" not in format_message(DAILY, QUALITY, LIVE_EMPTY, SIMULATED)

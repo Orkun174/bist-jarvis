@@ -1,5 +1,10 @@
 # launcher.py
-"""Windows launcher for BIST AI Radar inside a native pywebview window."""
+"""Windows launcher for BIST Jarvis inside a native pywebview window.
+
+Opens jarvis_app.py (set BIST_RADAR_APP=app.py for the old single-stock radar,
+which also needs Ollama). The new application does not use Ollama, so it is
+only started for the old one.
+"""
 
 from __future__ import annotations
 
@@ -27,7 +32,9 @@ BASE_DIR = (
     if getattr(sys, "frozen", False)
     else Path(__file__).resolve().parent
 )
-APP_PATH = BASE_DIR / "app.py"
+APP_PATH = BASE_DIR / os.environ.get("BIST_RADAR_APP", "jarvis_app.py")
+NEEDS_OLLAMA = APP_PATH.name == "app.py"
+WINDOW_TITLE = "BIST AI Radar" if NEEDS_OLLAMA else "BIST Jarvis"
 
 OLLAMA_PORT = 11434
 STREAMLIT_PORT = 8501
@@ -337,7 +344,7 @@ def ensure_streamlit() -> subprocess.Popen | None:
         if not port_is_listening(STREAMLIT_PORT):
             if not APP_PATH.is_file():
                 raise FileNotFoundError(
-                    "app.py must be located beside the launcher:\n"
+                    f"{APP_PATH.name} must be located beside the launcher:\n"
                     f"{APP_PATH}"
                 )
 
@@ -429,16 +436,17 @@ def main() -> None:
 
         acquired = True
 
-        ensure_ollama()
+        if NEEDS_OLLAMA:
+            ensure_ollama()
         streamlit_process = ensure_streamlit()
 
-        if not ollama_ready() or not streamlit_ready():
+        if (NEEDS_OLLAMA and not ollama_ready()) or not streamlit_ready():
             raise RuntimeError("A background service became unavailable.")
 
         # Native desktop window without browser tabs, address bars, or toolbars.
         # Standard native window controls remain available for closing the app.
         webview.create_window(
-            "BIST AI Radar",
+            WINDOW_TITLE,
             "http://localhost:8501",
             width=1280,
             height=800,

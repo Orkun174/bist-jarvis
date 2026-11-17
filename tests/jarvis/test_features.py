@@ -102,3 +102,24 @@ def test_zero_volume_and_flat_prices_produce_no_inf():
     )
     result = local_features(flat, random_ohlcv(1)["Close"])
     assert not np.isinf(result.to_numpy(dtype=float)).any()
+
+
+def test_extra_features_use_only_past_bars():
+    from jarvis.features import EXTRA_FEATURES, TURNOVER_RANK, extra_features
+
+    index = pd.bdate_range("2024-01-01", periods=400)
+    rng = np.random.default_rng(3)
+    close = pd.Series(100 * np.exp(np.cumsum(rng.normal(0, 0.02, len(index)))), index=index)
+    equity = pd.DataFrame({"Open": close, "High": close * 1.01, "Low": close * 0.99,
+                           "Close": close, "Volume": rng.uniform(1e5, 1e6, len(index))}, index=index)
+    benchmark = pd.Series(1000 * np.exp(np.cumsum(rng.normal(0, 0.01, len(index)))), index=index)
+
+    full = extra_features(equity, benchmark)
+    cut = extra_features(equity.iloc[:300], benchmark.iloc[:300])
+    assert set(full.columns) == (set(EXTRA_FEATURES) - {TURNOVER_RANK}) | {"_turnover"}
+    pd.testing.assert_frame_equal(full.iloc[:300], cut)
+
+    day = index[350]
+    expected = (close[day] / close[index[330]] - 1) - (benchmark[day] / benchmark[index[330]] - 1)
+    assert full.loc[day, "Rel_Return_20D"] == pytest.approx(expected)
+    assert full.loc[day, "High_252_Distance"] <= 0
