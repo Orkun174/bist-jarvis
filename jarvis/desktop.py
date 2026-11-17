@@ -297,8 +297,11 @@ def recipe_exams(data_dir: Path | str) -> pd.DataFrame:
             "challenger": entry.get("challenger_recipe_id"),
             "top_excess_diff": exam.get("top_excess_diff"),
             "rank_ic_diff": exam.get("rank_ic_diff"),
-            "p_top_excess": exam.get("p_top_excess"),
+            "pick_metric": exam.get("pick_metric", "top_excess"),
+            "pick_diff": exam.get("pick_diff", exam.get("top_excess_diff")),
+            "p_pick": exam.get("p_pick", exam.get("p_top_excess")),
             "p_rank_ic": exam.get("p_rank_ic"),
+            "confirmed": (entry.get("confirmation") or {}).get("ok"),
         })
     return pd.DataFrame(records)
 

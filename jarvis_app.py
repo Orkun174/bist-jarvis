@@ -254,8 +254,9 @@ def scorecard_screen(folder: Path) -> None:
     else:
         st.dataframe(exams.rename(columns={
             "session": "Seans", "candidates": "Aday", "promoted": "Terfi", "champion": "Şampiyon",
-            "challenger": "Rakip", "top_excess_diff": "Getiri farkı", "rank_ic_diff": "Rank IC farkı",
-            "p_top_excess": "Güven (getiri)", "p_rank_ic": "Güven (rank IC)",
+            "challenger": "Rakip", "top_excess_diff": "İlk 5 farkı", "rank_ic_diff": "Rank IC farkı",
+            "pick_metric": "Sınav ölçüsü", "pick_diff": "Ölçü farkı", "p_pick": "Güven (ölçü)",
+            "p_rank_ic": "Güven (rank IC)", "confirmed": "250 seans doğrulaması",
         }), width="stretch", hide_index=True)
 
     quality = (view or {}).get("quality")
