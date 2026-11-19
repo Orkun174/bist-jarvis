@@ -7,7 +7,7 @@ import pytest
 from jarvis.calendar import sessions_until
 from jarvis.config import OHLCV
 from jarvis.exclusions import COLUMNS, empty_exclusions
-from jarvis.pipeline import run
+from jarvis.pipeline import LAG_RETRIES, LAG_WAIT_SECONDS, run
 from jarvis.store import Store
 from jarvis.universe import UniverseError
 
@@ -47,10 +47,14 @@ def exclusions(tickers, session):
     return rows, {"kap_markets": "ok", "measures": "ok"}
 
 
+def no_wait(seconds):
+    raise AssertionError("one late ticker out of four is not a source lag")
+
+
 def execute(tmp_path, **overrides):
     arguments = dict(
         symbols=lambda: list(TICKERS), download=download, reference=reference,
-        exclusions=exclusions, exclusions_path=tmp_path / "manual.csv",
+        exclusions=exclusions, exclusions_path=tmp_path / "manual.csv", wait=no_wait,
     )
     arguments.update(overrides)
     return run(tmp_path / "data", AS_OF, **arguments)
@@ -151,3 +155,37 @@ def test_manual_csv_is_applied(tmp_path):
 def test_limit_processes_only_first_symbols(tmp_path):
     summary = execute(tmp_path, limit=2)
     assert summary["tickers"] == 2
+
+
+def lagging_download(published_after_calls):
+    """Yahoo without the session bar for every ticker until `published_after_calls` calls."""
+    calls = []
+
+    def fetch(symbols, start, end):
+        calls.append(symbols)
+        last = end if len(calls) > published_after_calls else end - pd.Timedelta(days=1)
+        return download(symbols, start, last)
+
+    return fetch
+
+
+def read_quality(tmp_path):
+    return json.loads((tmp_path / "data" / "quality" / "2026-11-13.json").read_text(encoding="utf-8"))
+
+
+def test_source_lag_waits_and_retries_until_the_session_arrives(tmp_path):
+    waits = []
+    execute(tmp_path, download=lagging_download(1), wait=waits.append)
+    assert waits == [LAG_WAIT_SECONDS]
+    report = read_quality(tmp_path)
+    assert list(report["quarantined"]) == ["LATE"]
+    assert report["source_lag"] is False
+
+
+def test_source_lag_that_never_clears_is_reported(tmp_path):
+    waits = []
+    execute(tmp_path, download=lagging_download(99), wait=waits.append)
+    assert waits == [LAG_WAIT_SECONDS] * LAG_RETRIES
+    report = read_quality(tmp_path)
+    assert report["source_lag"] is True
+    assert len(report["quarantined"]) == 4

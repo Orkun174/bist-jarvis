@@ -116,6 +116,13 @@ def test_message_warns_about_failed_exclusion_source():
     assert "tedbir listesi alınamadı" in text
 
 
+def test_message_explains_a_late_price_source():
+    quality = dict(QUALITY, source_lag=True)
+    text = format_message(None, quality, LIVE_EMPTY, None, session="2026-11-16")
+    assert "Yahoo bu seansın fiyatlarını henüz yayınlamamıştı" in text
+    assert "Yahoo" not in format_message(None, QUALITY, LIVE_EMPTY, None, session="2026-11-16")
+
+
 def test_message_without_daily_result():
     text = format_message(None, QUALITY, LIVE_EMPTY, None, session="2026-11-16")
     assert "Bugün için model sonucu üretilemedi" in text
