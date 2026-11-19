@@ -12,6 +12,7 @@ import argparse
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 from typing import Callable
 
@@ -29,6 +30,12 @@ from jarvis.universe import UniverseError, fetch_symbols
 
 LOG = logging.getLogger("jarvis.pipeline")
 DEFAULT_EXCLUSIONS = Path(__file__).resolve().parents[1] / "config" / "exclusions.csv"
+
+# More than this share of tickers without the session bar means Yahoo has not
+# published the session yet (2026-11-19: 626 of 629), not that the stocks are bad.
+SOURCE_LAG_RATIO = 0.5
+LAG_RETRIES = 3
+LAG_WAIT_SECONDS = 15 * 60
 
 # Which automatic source produced which exclusion reasons.
 SOURCE_REASONS = {
@@ -70,6 +77,14 @@ def _automatic_exclusions(
     return pd.concat(non_empty, ignore_index=True) if non_empty else fresh
 
 
+def _source_lagging(store: Store, tickers: list[str], session: pd.Timestamp) -> bool:
+    missing = 0
+    for ticker in tickers:
+        frame = store.read_prices(ticker)
+        missing += frame.empty or frame.index[-1] < session
+    return missing > SOURCE_LAG_RATIO * len(tickers)
+
+
 def run(
     data_dir: Path | str,
     as_of: pd.Timestamp | None = None,
@@ -80,6 +95,7 @@ def run(
     exclusions: Callable = fetch_exclusions,
     exclusions_path: Path | str = DEFAULT_EXCLUSIONS,
     limit: int | None = None,
+    wait: Callable[[float], object] = time.sleep,
 ) -> dict:
     session = last_completed_session(as_of)
     tickers = symbols()  # raises UniverseError before anything is written
@@ -89,6 +105,18 @@ def run(
 
     LOG.info("Seans %s: %d hisse için fiyatlar güncelleniyor.", session.date(), len(tickers))
     statuses = update_prices(store, tickers, session, download=download)
+    source_lag = _source_lagging(store, tickers, session)
+    for attempt in range(LAG_RETRIES):
+        if not source_lag:
+            break
+        LOG.warning(
+            "Yahoo %s seansını henüz yayınlamamış görünüyor; %d dk sonra yeniden denenecek (%d/%d).",
+            session.date(), LAG_WAIT_SECONDS // 60, attempt + 1, LAG_RETRIES,
+        )
+        wait(LAG_WAIT_SECONDS)
+        # Tickers that already have the session are "current" and are not downloaded again.
+        statuses = update_prices(store, tickers, session, download=download)
+        source_lag = _source_lagging(store, tickers, session)
     LOG.info("Fiyatlar tamam; veri kontrolü ve kapanış karşılaştırması başlıyor.")
     report = build_report(
         store, tickers, session, statuses, sessions_until(session, QUALITY_WINDOW),
@@ -111,6 +139,7 @@ def run(
     store.write_table("universe/universe", universe)
 
     report["exclusion_sources"] = source_status
+    report["source_lag"] = source_lag
     report["eligible"] = int(today["eligible"].sum())
     report["reasons"] = {
         str(reason or "eligible"): int(count)

@@ -162,6 +162,9 @@ def _data_line(quality: dict | None) -> list[str]:
         lines.append("Uyarı: tedbir listesi alınamadı, son başarılı liste kullanıldı.")
     if sources.get("kap_markets") == "failed":
         lines.append("Uyarı: KAP pazar bilgisi alınamadı, son başarılı liste kullanıldı.")
+    if quality.get("source_lag"):
+        lines.append("Uyarı: Yahoo bu seansın fiyatlarını henüz yayınlamamıştı; "
+                     "karantinadaki hisselerin çoğu bu yüzden eksik.")
     if quality.get("training_allowed") is False:
         lines.append("Uyarı: veri sorunları yüzünden bugün eğitim yapılmadı.")
     return lines
