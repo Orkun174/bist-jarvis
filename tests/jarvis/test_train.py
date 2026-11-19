@@ -9,7 +9,8 @@ from jarvis.eligibility import eligibility_today
 from jarvis.exclusions import empty_exclusions
 from jarvis.features import FEATURES
 from jarvis.ledger import read_ledger
-from jarvis.macro import macro_store
+from jarvis.config import LAG_RETRIES, LAG_WAIT_SECONDS
+from jarvis.macro import MACRO_SYMBOLS, macro_store
 from jarvis.model import Recipe, load_model
 from jarvis.store import Store
 from jarvis.train import run_daily, run_search, run_simulation
@@ -45,6 +46,49 @@ def prepare(root, tickers=12, session=SESSION, training_allowed=True, index=CALE
 
 def daily(root, **kwargs):
     return run_daily(root, AS_OF, download=None, **kwargs)
+
+
+def late_benchmark(root):
+    """Drop BIST100's session bar; the returned downloader serves it from the second call on."""
+    target = macro_store(root)
+    full = target.read_prices("BIST100")
+    target.write_prices("BIST100", full.iloc[:-1], replace=True)
+    calls = []
+
+    def download(symbols, start, end):
+        calls.append(symbols)
+        if len(calls) < 2 or MACRO_SYMBOLS["BIST100"] not in symbols:
+            return {}
+        return {MACRO_SYMBOLS["BIST100"]: full[(full.index >= start) & (full.index <= end)]}
+
+    return download
+
+
+def test_late_benchmark_is_waited_for_then_trains(tmp_path):
+    prepare(tmp_path)
+    waits = []
+    summary = run_daily(tmp_path, AS_OF, download=late_benchmark(tmp_path), wait=waits.append)
+    assert waits == [LAG_WAIT_SECONDS]
+    assert summary["status"] == "ok"
+
+
+def test_benchmark_never_arrives_after_all_retries(tmp_path):
+    prepare(tmp_path)
+    late_benchmark(tmp_path)  # only drops the session bar; this downloader never serves it
+    waits = []
+    summary = run_daily(tmp_path, AS_OF, download=lambda *_: {}, wait=waits.append)
+    assert waits == [LAG_WAIT_SECONDS] * LAG_RETRIES
+    assert summary == {"status": "skipped", "reason": "macro_unavailable"}
+
+
+def test_no_macro_wait_when_the_price_source_already_lagged(tmp_path):
+    prepare(tmp_path)
+    quality = tmp_path / "quality" / "2026-11-13.json"
+    quality.write_text(json.dumps(dict(json.loads(quality.read_text()), source_lag=True)))
+    waits = []
+    summary = run_daily(tmp_path, AS_OF, download=late_benchmark(tmp_path), wait=waits.append)
+    assert waits == []
+    assert summary == {"status": "skipped", "reason": "macro_unavailable"}
 
 
 def test_first_run_trains_and_records(tmp_path):

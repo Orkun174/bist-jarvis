@@ -37,7 +37,8 @@ concurrency:
 jobs:
   daily-data:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # Up to 45 min waiting for Yahoo prices plus 45 for macro series (jarvis/config.py).
+    timeout-minutes: 120
 
     env:
       TZ: Europe/Istanbul
