@@ -66,7 +66,7 @@ def yahoo_download(
 
 def _clean(frame: pd.DataFrame, session: pd.Timestamp) -> pd.DataFrame:
     if frame is None or frame.empty or not set(OHLCV).issubset(frame.columns):
-        return pd.DataFrame(columns=OHLCV)
+        return pd.DataFrame(columns=OHLCV, index=pd.DatetimeIndex([]))
     frame = frame[OHLCV].copy()
     frame.columns.name = None
     index = pd.DatetimeIndex(frame.index)
