@@ -12,14 +12,17 @@ import argparse
 import json
 import logging
 import sys
+import time
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import pandas as pd
 
 from jarvis.calendar import last_completed_session
 from jarvis.config import (
-    EXAM_SESSIONS, HEALTH_SESSIONS, HORIZON, MIN_TRAIN_ROWS, SIM_SESSIONS,
+    EXAM_SESSIONS, HEALTH_SESSIONS, HORIZON, LAG_RETRIES, LAG_WAIT_SECONDS, MIN_TRAIN_ROWS,
+    SIM_SESSIONS,
 )
 from jarvis.dataset import build_rows, prediction_slice, training_slice
 from jarvis.features import FEATURE_SETS, feature_set_name
@@ -60,7 +63,14 @@ def load_recipe(data_dir: Path) -> Recipe:
     return Recipe.from_dict(saved) if saved else DEFAULT_RECIPE
 
 
-def _prepare(data_dir: Path, as_of, download: Downloader | None):
+def _macro_ready(macro: dict[str, pd.DataFrame], session: pd.Timestamp) -> bool:
+    benchmark, vix = macro["BIST100"], macro["VIX"]
+    benchmark_ok = not benchmark.empty and benchmark.index[-1] >= session
+    vix_ok = not vix.empty and vix.index[-1] >= session - VIX_MAX_AGE
+    return benchmark_ok and vix_ok
+
+
+def _prepare(data_dir: Path, as_of, download: Downloader | None, wait: Callable = time.sleep):
     """Common start: session, macro series, calendar, universe and rows."""
     session = last_completed_session(as_of)
     store = Store(data_dir)
@@ -71,11 +81,21 @@ def _prepare(data_dir: Path, as_of, download: Downloader | None):
     if download is not None:
         update_macro(data_dir, session, download=download)
     macro = load_macro(data_dir)
-    benchmark, vix = macro["BIST100"], macro["VIX"]
-    benchmark_ok = not benchmark.empty and benchmark.index[-1] >= session
-    vix_ok = not vix.empty and vix.index[-1] >= session - VIX_MAX_AGE
-    if not (benchmark_ok and vix_ok):
+    # When the price job already waited for Yahoo in vain, waiting again only burns the job limit.
+    retries = LAG_RETRIES if download is not None and not report.get("source_lag") else 0
+    for attempt in range(retries):
+        if _macro_ready(macro, session):
+            break
+        LOG.warning(
+            "BIST100/VIX %s seansı için henüz yok; %d dk sonra yeniden denenecek (%d/%d).",
+            session.date(), LAG_WAIT_SECONDS // 60, attempt + 1, retries,
+        )
+        wait(LAG_WAIT_SECONDS)
+        update_macro(data_dir, session, download=download)
+        macro = load_macro(data_dir)
+    if not _macro_ready(macro, session):
         raise Skip("macro_unavailable")
+    benchmark = macro["BIST100"]
     assert set(REQUIRED_MACRO) == {"BIST100", "VIX"}
 
     universe = store.read_table("universe/universe")
@@ -132,11 +152,14 @@ def _clean(value):
 
 # -- daily ------------------------------------------------------------------
 
-def run_daily(data_dir: Path | str, as_of=None, *, download: Downloader | None = yahoo_download) -> dict:
+def run_daily(
+    data_dir: Path | str, as_of=None, *, download: Downloader | None = yahoo_download,
+    wait: Callable = time.sleep,
+) -> dict:
     data_dir = Path(data_dir)
     try:
         session, store, report, macro, calendar, rows, eligible_today = _prepare(
-            data_dir, as_of, download
+            data_dir, as_of, download, wait
         )
     except Skip as skip:
         LOG.warning("Eğitim atlandı: %s", skip)

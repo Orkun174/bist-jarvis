@@ -17,6 +17,13 @@ MAX_QUARANTINE_RATIO = 0.20    # above this share of quarantined tickers, no tra
 SUSPECT_JUMP = 0.25            # |daily return| above this on adjusted data is suspect
 QUALITY_WINDOW = 20            # recent sessions inspected by the quality checks
 
+# Yahoo publishing late. More than this share of tickers without the session bar
+# means the source has not published it yet (2026-11-19: 626 of 629), not that
+# the stocks are bad. Prices and macro series are then retried after a wait.
+SOURCE_LAG_RATIO = 0.5
+LAG_RETRIES = 3
+LAG_WAIT_SECONDS = 15 * 60
+
 # Eligibility (manipulation filter).
 MIN_HISTORY_SESSIONS = 252
 LIQUIDITY_WINDOW = 20

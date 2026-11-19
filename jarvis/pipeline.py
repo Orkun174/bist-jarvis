@@ -19,7 +19,7 @@ from typing import Callable
 import pandas as pd
 
 from jarvis.calendar import last_completed_session, sessions_until
-from jarvis.config import QUALITY_WINDOW
+from jarvis.config import LAG_RETRIES, LAG_WAIT_SECONDS, QUALITY_WINDOW, SOURCE_LAG_RATIO
 from jarvis.eligibility import eligibility_today
 from jarvis.exclusions import COLUMNS, load_exclusions
 from jarvis.measures import fetch_exclusions
@@ -30,12 +30,6 @@ from jarvis.universe import UniverseError, fetch_symbols
 
 LOG = logging.getLogger("jarvis.pipeline")
 DEFAULT_EXCLUSIONS = Path(__file__).resolve().parents[1] / "config" / "exclusions.csv"
-
-# More than this share of tickers without the session bar means Yahoo has not
-# published the session yet (2026-11-19: 626 of 629), not that the stocks are bad.
-SOURCE_LAG_RATIO = 0.5
-LAG_RETRIES = 3
-LAG_WAIT_SECONDS = 15 * 60
 
 # Which automatic source produced which exclusion reasons.
 SOURCE_REASONS = {
