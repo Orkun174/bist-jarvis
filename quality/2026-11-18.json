@@ -1,0 +1,1900 @@
+{
+  "cross_check_unavailable": [],
+  "eligible": 0,
+  "exclusion_sources": {
+    "kap_markets": "ok",
+    "measures": "ok"
+  },
+  "fetch_failed": [
+    "ISKUR"
+  ],
+  "quarantine_ratio": 0.995231,
+  "quarantined": {
+    "A1CAP": [
+      "stale"
+    ],
+    "A1YEN": [
+      "stale"
+    ],
+    "AAGYO": [
+      "stale"
+    ],
+    "ACSEL": [
+      "stale"
+    ],
+    "ADEL": [
+      "stale"
+    ],
+    "ADESE": [
+      "stale"
+    ],
+    "ADGYO": [
+      "stale"
+    ],
+    "AEFES": [
+      "stale"
+    ],
+    "AFYON": [
+      "stale"
+    ],
+    "AGESA": [
+      "stale"
+    ],
+    "AGHOL": [
+      "stale"
+    ],
+    "AGROT": [
+      "stale"
+    ],
+    "AGYO": [
+      "stale"
+    ],
+    "AHGAZ": [
+      "stale"
+    ],
+    "AHSGY": [
+      "stale"
+    ],
+    "AKBNK": [
+      "stale"
+    ],
+    "AKCNS": [
+      "stale"
+    ],
+    "AKENR": [
+      "stale"
+    ],
+    "AKFGY": [
+      "stale"
+    ],
+    "AKFIS": [
+      "stale"
+    ],
+    "AKFYE": [
+      "stale"
+    ],
+    "AKGRT": [
+      "stale"
+    ],
+    "AKHAN": [
+      "stale"
+    ],
+    "AKMGY": [
+      "stale"
+    ],
+    "AKSA": [
+      "stale"
+    ],
+    "AKSEN": [
+      "stale"
+    ],
+    "AKSGY": [
+      "stale"
+    ],
+    "AKSUE": [
+      "stale"
+    ],
+    "AKYHO": [
+      "stale"
+    ],
+    "ALARK": [
+      "stale"
+    ],
+    "ALBRK": [
+      "stale"
+    ],
+    "ALBTN": [
+      "stale"
+    ],
+    "ALCAR": [
+      "stale"
+    ],
+    "ALCTL": [
+      "stale"
+    ],
+    "ALFAS": [
+      "stale"
+    ],
+    "ALGYO": [
+      "stale"
+    ],
+    "ALKA": [
+      "stale"
+    ],
+    "ALKIM": [
+      "stale"
+    ],
+    "ALKLC": [
+      "stale"
+    ],
+    "ALTNY": [
+      "stale"
+    ],
+    "ALVES": [
+      "stale"
+    ],
+    "ANELE": [
+      "stale"
+    ],
+    "ANGEN": [
+      "stale"
+    ],
+    "ANHYT": [
+      "stale"
+    ],
+    "ANSGR": [
+      "stale"
+    ],
+    "ARASE": [
+      "stale"
+    ],
+    "ARCLK": [
+      "stale"
+    ],
+    "ARDYZ": [
+      "stale"
+    ],
+    "ARENA": [
+      "stale"
+    ],
+    "ARFYE": [
+      "stale"
+    ],
+    "ARMGD": [
+      "stale"
+    ],
+    "ARSAN": [
+      "stale"
+    ],
+    "ARTMS": [
+      "stale"
+    ],
+    "ARZUM": [
+      "stale"
+    ],
+    "ASELS": [
+      "stale"
+    ],
+    "ASGYO": [
+      "stale"
+    ],
+    "ASTOR": [
+      "stale"
+    ],
+    "ASUZU": [
+      "stale"
+    ],
+    "ATAGY": [
+      "stale"
+    ],
+    "ATAKP": [
+      "stale"
+    ],
+    "ATATP": [
+      "stale"
+    ],
+    "ATATR": [
+      "stale"
+    ],
+    "ATEKS": [
+      "stale"
+    ],
+    "ATLAS": [
+      "stale"
+    ],
+    "ATSYH": [
+      "stale"
+    ],
+    "AVGYO": [
+      "stale"
+    ],
+    "AVHOL": [
+      "stale"
+    ],
+    "AVOD": [
+      "stale"
+    ],
+    "AVPGY": [
+      "stale"
+    ],
+    "AVTUR": [
+      "stale"
+    ],
+    "AYCES": [
+      "stale"
+    ],
+    "AYDEM": [
+      "stale"
+    ],
+    "AYEN": [
+      "stale"
+    ],
+    "AYES": [
+      "stale"
+    ],
+    "AYGAZ": [
+      "stale"
+    ],
+    "AZTEK": [
+      "stale"
+    ],
+    "BAGFS": [
+      "stale"
+    ],
+    "BAHKM": [
+      "stale"
+    ],
+    "BAKAB": [
+      "stale"
+    ],
+    "BALAT": [
+      "stale"
+    ],
+    "BALSU": [
+      "stale"
+    ],
+    "BANVT": [
+      "stale"
+    ],
+    "BARMA": [
+      "stale"
+    ],
+    "BASCM": [
+      "stale"
+    ],
+    "BASGZ": [
+      "stale"
+    ],
+    "BAYRK": [
+      "stale"
+    ],
+    "BEGYO": [
+      "stale"
+    ],
+    "BERA": [
+      "stale"
+    ],
+    "BESLR": [
+      "stale"
+    ],
+    "BESTE": [
+      "stale"
+    ],
+    "BETAE": [
+      "stale"
+    ],
+    "BEYAZ": [
+      "stale"
+    ],
+    "BFREN": [
+      "stale"
+    ],
+    "BIENY": [
+      "stale"
+    ],
+    "BIGCH": [
+      "stale"
+    ],
+    "BIGEN": [
+      "stale"
+    ],
+    "BIGTK": [
+      "stale"
+    ],
+    "BIMAS": [
+      "stale"
+    ],
+    "BINBN": [
+      "stale"
+    ],
+    "BINHO": [
+      "stale"
+    ],
+    "BIOEN": [
+      "stale"
+    ],
+    "BIZIM": [
+      "stale"
+    ],
+    "BJKAS": [
+      "stale"
+    ],
+    "BKRGY": [
+      "stale"
+    ],
+    "BLCYT": [
+      "stale"
+    ],
+    "BLUME": [
+      "stale"
+    ],
+    "BMSCH": [
+      "stale"
+    ],
+    "BMSTL": [
+      "stale"
+    ],
+    "BNTAS": [
+      "stale"
+    ],
+    "BOBET": [
+      "stale"
+    ],
+    "BORLS": [
+      "stale"
+    ],
+    "BORSK": [
+      "stale"
+    ],
+    "BOSSA": [
+      "stale"
+    ],
+    "BRISA": [
+      "stale"
+    ],
+    "BRKO": [
+      "stale"
+    ],
+    "BRKSN": [
+      "stale"
+    ],
+    "BRKVY": [
+      "stale"
+    ],
+    "BRLSM": [
+      "stale"
+    ],
+    "BRMEN": [
+      "stale"
+    ],
+    "BRSAN": [
+      "stale"
+    ],
+    "BRYAT": [
+      "stale"
+    ],
+    "BSOKE": [
+      "stale"
+    ],
+    "BTCIM": [
+      "stale"
+    ],
+    "BUCIM": [
+      "stale"
+    ],
+    "BULGS": [
+      "stale"
+    ],
+    "BURCE": [
+      "stale"
+    ],
+    "BURVA": [
+      "stale"
+    ],
+    "BVSAN": [
+      "stale"
+    ],
+    "BYDNR": [
+      "stale"
+    ],
+    "CANTE": [
+      "stale"
+    ],
+    "CASA": [
+      "stale"
+    ],
+    "CATES": [
+      "stale"
+    ],
+    "CCOLA": [
+      "stale"
+    ],
+    "CELHA": [
+      "stale"
+    ],
+    "CEMAS": [
+      "stale"
+    ],
+    "CEMTS": [
+      "stale"
+    ],
+    "CEMZY": [
+      "stale"
+    ],
+    "CEOEM": [
+      "stale"
+    ],
+    "CGCAM": [
+      "stale"
+    ],
+    "CIMSA": [
+      "stale"
+    ],
+    "CITAS": [
+      "stale"
+    ],
+    "CLEBI": [
+      "stale"
+    ],
+    "CMBTN": [
+      "stale"
+    ],
+    "CMENT": [
+      "stale"
+    ],
+    "CONSE": [
+      "stale"
+    ],
+    "COSMO": [
+      "stale"
+    ],
+    "CRDFA": [
+      "stale"
+    ],
+    "CRFSA": [
+      "stale"
+    ],
+    "CUSAN": [
+      "stale"
+    ],
+    "CVKMD": [
+      "stale"
+    ],
+    "CWENE": [
+      "stale"
+    ],
+    "DAGI": [
+      "stale"
+    ],
+    "DAPGM": [
+      "stale"
+    ],
+    "DARDL": [
+      "stale"
+    ],
+    "DCTTR": [
+      "stale"
+    ],
+    "DENGE": [
+      "stale"
+    ],
+    "DERHL": [
+      "stale"
+    ],
+    "DERIM": [
+      "stale"
+    ],
+    "DESA": [
+      "stale"
+    ],
+    "DESPC": [
+      "stale"
+    ],
+    "DEVA": [
+      "stale"
+    ],
+    "DGATE": [
+      "stale"
+    ],
+    "DGGYO": [
+      "stale"
+    ],
+    "DGNMO": [
+      "stale"
+    ],
+    "DIRIT": [
+      "stale"
+    ],
+    "DITAS": [
+      "stale"
+    ],
+    "DMRGD": [
+      "stale"
+    ],
+    "DMSAS": [
+      "stale"
+    ],
+    "DNISI": [
+      "stale"
+    ],
+    "DOAS": [
+      "stale"
+    ],
+    "DOCO": [
+      "stale"
+    ],
+    "DOFER": [
+      "stale"
+    ],
+    "DOFRB": [
+      "stale"
+    ],
+    "DOGUB": [
+      "stale"
+    ],
+    "DOHOL": [
+      "stale"
+    ],
+    "DOKTA": [
+      "stale"
+    ],
+    "DSTKF": [
+      "stale"
+    ],
+    "DUNYH": [
+      "stale"
+    ],
+    "DURDO": [
+      "stale"
+    ],
+    "DURKN": [
+      "stale"
+    ],
+    "DYOBY": [
+      "stale"
+    ],
+    "DZGYO": [
+      "stale"
+    ],
+    "EBEBK": [
+      "stale"
+    ],
+    "ECILC": [
+      "stale"
+    ],
+    "ECOGR": [
+      "stale"
+    ],
+    "ECZYT": [
+      "stale"
+    ],
+    "EDATA": [
+      "stale"
+    ],
+    "EDIP": [
+      "stale"
+    ],
+    "EFOR": [
+      "stale"
+    ],
+    "EGEEN": [
+      "stale"
+    ],
+    "EGEGY": [
+      "stale"
+    ],
+    "EGEPO": [
+      "stale"
+    ],
+    "EGGUB": [
+      "stale"
+    ],
+    "EGPRO": [
+      "stale"
+    ],
+    "EGSER": [
+      "stale"
+    ],
+    "EKDMR": [
+      "stale"
+    ],
+    "EKGYO": [
+      "stale"
+    ],
+    "EKIM": [
+      "stale"
+    ],
+    "EKIZ": [
+      "stale"
+    ],
+    "EKOS": [
+      "stale"
+    ],
+    "EKSUN": [
+      "stale"
+    ],
+    "ELITE": [
+      "stale"
+    ],
+    "EMKEL": [
+      "stale"
+    ],
+    "EMNIS": [
+      "stale"
+    ],
+    "EMPAE": [
+      "stale"
+    ],
+    "ENDAE": [
+      "stale"
+    ],
+    "ENERY": [
+      "stale"
+    ],
+    "ENJSA": [
+      "stale"
+    ],
+    "ENKAI": [
+      "stale"
+    ],
+    "ENPRA": [
+      "stale"
+    ],
+    "ENSRI": [
+      "stale"
+    ],
+    "ENTRA": [
+      "stale"
+    ],
+    "EPLAS": [
+      "stale"
+    ],
+    "ERBOS": [
+      "stale"
+    ],
+    "ERCB": [
+      "stale"
+    ],
+    "EREGL": [
+      "stale"
+    ],
+    "ERSU": [
+      "stale"
+    ],
+    "ESCAR": [
+      "stale"
+    ],
+    "ESCOM": [
+      "stale"
+    ],
+    "ESEN": [
+      "stale"
+    ],
+    "ETILR": [
+      "stale"
+    ],
+    "ETYAT": [
+      "stale"
+    ],
+    "EUHOL": [
+      "stale"
+    ],
+    "EUKYO": [
+      "stale"
+    ],
+    "EUPWR": [
+      "stale"
+    ],
+    "EUREN": [
+      "stale"
+    ],
+    "EUYO": [
+      "stale"
+    ],
+    "EYGYO": [
+      "stale"
+    ],
+    "FADE": [
+      "stale"
+    ],
+    "FENER": [
+      "stale"
+    ],
+    "FLAP": [
+      "stale"
+    ],
+    "FMIZP": [
+      "stale"
+    ],
+    "FONET": [
+      "stale"
+    ],
+    "FORMT": [
+      "stale"
+    ],
+    "FORTE": [
+      "stale"
+    ],
+    "FRIGO": [
+      "stale"
+    ],
+    "FRMPL": [
+      "stale"
+    ],
+    "FROTO": [
+      "stale"
+    ],
+    "FZLGY": [
+      "stale"
+    ],
+    "GARAN": [
+      "stale"
+    ],
+    "GARFA": [
+      "stale"
+    ],
+    "GATEG": [
+      "stale"
+    ],
+    "GEDIK": [
+      "stale"
+    ],
+    "GEDZA": [
+      "stale"
+    ],
+    "GENIL": [
+      "stale"
+    ],
+    "GENKM": [
+      "stale"
+    ],
+    "GENTS": [
+      "stale"
+    ],
+    "GEREL": [
+      "stale"
+    ],
+    "GESAN": [
+      "stale"
+    ],
+    "GIPTA": [
+      "stale"
+    ],
+    "GLBMD": [
+      "stale"
+    ],
+    "GLCVY": [
+      "stale"
+    ],
+    "GLRMK": [
+      "stale"
+    ],
+    "GLRYH": [
+      "stale"
+    ],
+    "GLYHO": [
+      "stale"
+    ],
+    "GMTAS": [
+      "stale"
+    ],
+    "GOKNR": [
+      "stale"
+    ],
+    "GOLDA": [
+      "stale"
+    ],
+    "GOLTS": [
+      "stale"
+    ],
+    "GOODY": [
+      "stale"
+    ],
+    "GOZDE": [
+      "stale"
+    ],
+    "GRNYO": [
+      "stale"
+    ],
+    "GRSEL": [
+      "stale"
+    ],
+    "GRTHO": [
+      "stale"
+    ],
+    "GSDDE": [
+      "stale"
+    ],
+    "GSDHO": [
+      "stale"
+    ],
+    "GSRAY": [
+      "stale"
+    ],
+    "GUBRF": [
+      "stale"
+    ],
+    "GUNDG": [
+      "stale"
+    ],
+    "GWIND": [
+      "stale"
+    ],
+    "GZNMI": [
+      "stale"
+    ],
+    "HALKB": [
+      "stale"
+    ],
+    "HATEK": [
+      "stale"
+    ],
+    "HATSN": [
+      "stale"
+    ],
+    "HDFGS": [
+      "stale"
+    ],
+    "HEDEF": [
+      "stale"
+    ],
+    "HEKTS": [
+      "stale"
+    ],
+    "HKTM": [
+      "stale"
+    ],
+    "HLGYO": [
+      "stale"
+    ],
+    "HOROZ": [
+      "stale"
+    ],
+    "HRKET": [
+      "stale"
+    ],
+    "HTTBT": [
+      "stale"
+    ],
+    "HUBVC": [
+      "stale"
+    ],
+    "HUNER": [
+      "stale"
+    ],
+    "HURGZ": [
+      "stale"
+    ],
+    "ICBCT": [
+      "stale"
+    ],
+    "ICUGS": [
+      "stale"
+    ],
+    "IDGYO": [
+      "stale"
+    ],
+    "IEYHO": [
+      "stale"
+    ],
+    "IHAAS": [
+      "stale"
+    ],
+    "IHEVA": [
+      "stale"
+    ],
+    "IHGZT": [
+      "stale"
+    ],
+    "IHLAS": [
+      "stale"
+    ],
+    "IHLGM": [
+      "stale"
+    ],
+    "IHYAY": [
+      "stale"
+    ],
+    "IMASM": [
+      "stale"
+    ],
+    "INDES": [
+      "stale"
+    ],
+    "INFO": [
+      "stale"
+    ],
+    "INGRM": [
+      "stale"
+    ],
+    "INTEK": [
+      "stale"
+    ],
+    "INTEM": [
+      "stale"
+    ],
+    "INTET": [
+      "stale"
+    ],
+    "INVEO": [
+      "stale"
+    ],
+    "INVES": [
+      "stale"
+    ],
+    "ISATR": [
+      "stale"
+    ],
+    "ISBIR": [
+      "stale"
+    ],
+    "ISBTR": [
+      "stale"
+    ],
+    "ISCTR": [
+      "stale"
+    ],
+    "ISDMR": [
+      "stale"
+    ],
+    "ISFIN": [
+      "stale"
+    ],
+    "ISGYO": [
+      "stale"
+    ],
+    "ISKPL": [
+      "stale"
+    ],
+    "ISKUR": [
+      "stale",
+      "fetch_failed"
+    ],
+    "ISMEN": [
+      "stale"
+    ],
+    "ISSEN": [
+      "stale"
+    ],
+    "ISVEA": [
+      "stale"
+    ],
+    "ISYAT": [
+      "stale"
+    ],
+    "IZENR": [
+      "stale"
+    ],
+    "IZFAS": [
+      "stale"
+    ],
+    "IZINV": [
+      "stale"
+    ],
+    "IZMDC": [
+      "stale"
+    ],
+    "JANTS": [
+      "stale"
+    ],
+    "KAPLM": [
+      "stale"
+    ],
+    "KARCL": [
+      "stale"
+    ],
+    "KAREL": [
+      "stale"
+    ],
+    "KARSN": [
+      "stale"
+    ],
+    "KARTN": [
+      "stale"
+    ],
+    "KATMR": [
+      "stale"
+    ],
+    "KAYSE": [
+      "stale"
+    ],
+    "KBORU": [
+      "stale"
+    ],
+    "KCAER": [
+      "stale"
+    ],
+    "KCHOL": [
+      "stale"
+    ],
+    "KENT": [
+      "stale"
+    ],
+    "KERVN": [
+      "stale"
+    ],
+    "KFEIN": [
+      "stale"
+    ],
+    "KGYO": [
+      "stale"
+    ],
+    "KIMMR": [
+      "stale"
+    ],
+    "KLGYO": [
+      "stale"
+    ],
+    "KLKIM": [
+      "stale"
+    ],
+    "KLMSN": [
+      "stale"
+    ],
+    "KLNMA": [
+      "stale"
+    ],
+    "KLRHO": [
+      "stale"
+    ],
+    "KLSER": [
+      "stale"
+    ],
+    "KLSYN": [
+      "stale"
+    ],
+    "KLYPV": [
+      "stale"
+    ],
+    "KMPUR": [
+      "stale"
+    ],
+    "KNFRT": [
+      "stale"
+    ],
+    "KOCMT": [
+      "stale"
+    ],
+    "KONKA": [
+      "stale"
+    ],
+    "KONTR": [
+      "stale"
+    ],
+    "KONYA": [
+      "stale"
+    ],
+    "KOPOL": [
+      "stale"
+    ],
+    "KORDS": [
+      "stale"
+    ],
+    "KOTON": [
+      "stale"
+    ],
+    "KPEKS": [
+      "stale"
+    ],
+    "KRDMA": [
+      "stale"
+    ],
+    "KRDMB": [
+      "stale"
+    ],
+    "KRDMD": [
+      "stale"
+    ],
+    "KRGYO": [
+      "stale"
+    ],
+    "KRONT": [
+      "stale"
+    ],
+    "KRPLS": [
+      "stale"
+    ],
+    "KRSTL": [
+      "stale"
+    ],
+    "KRTEK": [
+      "stale"
+    ],
+    "KRVGD": [
+      "stale"
+    ],
+    "KSTUR": [
+      "stale"
+    ],
+    "KTLEV": [
+      "stale"
+    ],
+    "KTSKR": [
+      "stale"
+    ],
+    "KUTPO": [
+      "stale"
+    ],
+    "KUVVA": [
+      "stale"
+    ],
+    "KUYAS": [
+      "stale"
+    ],
+    "KZBGY": [
+      "stale"
+    ],
+    "LIDER": [
+      "stale"
+    ],
+    "LIDFA": [
+      "stale"
+    ],
+    "LILAK": [
+      "stale"
+    ],
+    "LINK": [
+      "stale"
+    ],
+    "LKMNH": [
+      "stale"
+    ],
+    "LMKDC": [
+      "stale"
+    ],
+    "LOGO": [
+      "stale"
+    ],
+    "LRSHO": [
+      "stale"
+    ],
+    "LUKSK": [
+      "stale"
+    ],
+    "LXGYO": [
+      "stale"
+    ],
+    "LYDHO": [
+      "stale"
+    ],
+    "LYDYE": [
+      "stale"
+    ],
+    "MAALT": [
+      "stale"
+    ],
+    "MACKO": [
+      "stale"
+    ],
+    "MAGEN": [
+      "stale"
+    ],
+    "MAKIM": [
+      "stale"
+    ],
+    "MAKTK": [
+      "stale"
+    ],
+    "MANAS": [
+      "stale"
+    ],
+    "MARBL": [
+      "stale"
+    ],
+    "MARMR": [
+      "stale"
+    ],
+    "MARTI": [
+      "stale"
+    ],
+    "MASFN": [
+      "stale"
+    ],
+    "MAVI": [
+      "stale"
+    ],
+    "MCARD": [
+      "stale"
+    ],
+    "MEDTR": [
+      "stale"
+    ],
+    "MEGAP": [
+      "stale"
+    ],
+    "MEGMT": [
+      "stale"
+    ],
+    "MEKAG": [
+      "stale"
+    ],
+    "MEPET": [
+      "stale"
+    ],
+    "MERCN": [
+      "stale"
+    ],
+    "MERIT": [
+      "stale"
+    ],
+    "MERKO": [
+      "stale"
+    ],
+    "METEN": [
+      "stale"
+    ],
+    "METRO": [
+      "stale"
+    ],
+    "MEYSU": [
+      "stale"
+    ],
+    "MGROS": [
+      "stale"
+    ],
+    "MHRGY": [
+      "stale"
+    ],
+    "MIATK": [
+      "stale"
+    ],
+    "MMCAS": [
+      "stale"
+    ],
+    "MNDRS": [
+      "stale"
+    ],
+    "MNDTR": [
+      "stale"
+    ],
+    "MOBTL": [
+      "stale"
+    ],
+    "MOGAN": [
+      "stale"
+    ],
+    "MOPAS": [
+      "stale"
+    ],
+    "MPARK": [
+      "stale"
+    ],
+    "MRGYO": [
+      "stale"
+    ],
+    "MRSHL": [
+      "stale"
+    ],
+    "MSGYO": [
+      "stale"
+    ],
+    "MTRKS": [
+      "stale"
+    ],
+    "MTRYO": [
+      "stale"
+    ],
+    "MZHLD": [
+      "stale"
+    ],
+    "NATEN": [
+      "stale"
+    ],
+    "NETAS": [
+      "stale"
+    ],
+    "NETCD": [
+      "stale"
+    ],
+    "NETGL": [
+      "stale"
+    ],
+    "NIBAS": [
+      "stale"
+    ],
+    "NTGAZ": [
+      "stale"
+    ],
+    "NTHOL": [
+      "stale"
+    ],
+    "NUGYO": [
+      "stale"
+    ],
+    "NUHCM": [
+      "stale"
+    ],
+    "OBAMS": [
+      "stale"
+    ],
+    "OBASE": [
+      "stale"
+    ],
+    "ODAS": [
+      "stale"
+    ],
+    "ODINE": [
+      "stale"
+    ],
+    "OFSYM": [
+      "stale"
+    ],
+    "ONCSM": [
+      "stale"
+    ],
+    "ONRYT": [
+      "stale"
+    ],
+    "ORCAY": [
+      "stale"
+    ],
+    "ORGE": [
+      "stale"
+    ],
+    "ORMA": [
+      "stale"
+    ],
+    "ORZAX": [
+      "stale"
+    ],
+    "OSMEN": [
+      "stale"
+    ],
+    "OSTIM": [
+      "stale"
+    ],
+    "OTKAR": [
+      "stale"
+    ],
+    "OTTO": [
+      "stale"
+    ],
+    "OYAKC": [
+      "stale"
+    ],
+    "OYAYO": [
+      "stale"
+    ],
+    "OYLUM": [
+      "stale"
+    ],
+    "OYYAT": [
+      "stale"
+    ],
+    "OZATD": [
+      "stale"
+    ],
+    "OZGYO": [
+      "stale"
+    ],
+    "OZKGY": [
+      "stale"
+    ],
+    "OZRDN": [
+      "stale"
+    ],
+    "OZSUB": [
+      "stale"
+    ],
+    "OZYSR": [
+      "stale"
+    ],
+    "PAGYO": [
+      "stale"
+    ],
+    "PAHOL": [
+      "stale"
+    ],
+    "PAMEL": [
+      "stale"
+    ],
+    "PAPIL": [
+      "stale"
+    ],
+    "PARSN": [
+      "stale"
+    ],
+    "PASEU": [
+      "stale"
+    ],
+    "PATEK": [
+      "stale"
+    ],
+    "PCILT": [
+      "stale"
+    ],
+    "PEKGY": [
+      "stale"
+    ],
+    "PENGD": [
+      "stale"
+    ],
+    "PENTA": [
+      "stale"
+    ],
+    "PETKM": [
+      "stale"
+    ],
+    "PETUN": [
+      "stale"
+    ],
+    "PGSUS": [
+      "stale"
+    ],
+    "PINSU": [
+      "stale"
+    ],
+    "PKART": [
+      "stale"
+    ],
+    "PKENT": [
+      "stale"
+    ],
+    "PLTUR": [
+      "stale"
+    ],
+    "PNLSN": [
+      "stale"
+    ],
+    "PNSUT": [
+      "stale"
+    ],
+    "POLHO": [
+      "stale"
+    ],
+    "POLTK": [
+      "stale"
+    ],
+    "PRDGS": [
+      "stale"
+    ],
+    "PRKAB": [
+      "stale"
+    ],
+    "PRKME": [
+      "stale"
+    ],
+    "PRZMA": [
+      "stale"
+    ],
+    "PSDTC": [
+      "stale"
+    ],
+    "PSGYO": [
+      "stale"
+    ],
+    "QNBFK": [
+      "stale"
+    ],
+    "QNBTR": [
+      "stale"
+    ],
+    "QUAGR": [
+      "stale"
+    ],
+    "QUICK": [
+      "stale"
+    ],
+    "RALYH": [
+      "stale"
+    ],
+    "RAYSG": [
+      "stale"
+    ],
+    "REEDR": [
+      "stale"
+    ],
+    "RGYAS": [
+      "stale"
+    ],
+    "RNPOL": [
+      "stale"
+    ],
+    "RODRG": [
+      "stale"
+    ],
+    "RTALB": [
+      "stale"
+    ],
+    "RUBNS": [
+      "stale"
+    ],
+    "RUZYE": [
+      "stale"
+    ],
+    "RYGYO": [
+      "stale"
+    ],
+    "RYSAS": [
+      "stale"
+    ],
+    "SAFKR": [
+      "stale"
+    ],
+    "SAHOL": [
+      "stale"
+    ],
+    "SAMAT": [
+      "stale"
+    ],
+    "SANEL": [
+      "stale"
+    ],
+    "SANFM": [
+      "stale"
+    ],
+    "SANKO": [
+      "stale"
+    ],
+    "SARAE": [
+      "stale"
+    ],
+    "SARKY": [
+      "stale"
+    ],
+    "SASA": [
+      "stale"
+    ],
+    "SAYAS": [
+      "stale"
+    ],
+    "SDTTR": [
+      "stale"
+    ],
+    "SEGMN": [
+      "stale"
+    ],
+    "SEGYO": [
+      "stale"
+    ],
+    "SEKFK": [
+      "stale"
+    ],
+    "SEKUR": [
+      "stale"
+    ],
+    "SELEC": [
+      "stale"
+    ],
+    "SELVA": [
+      "stale"
+    ],
+    "SERNT": [
+      "stale"
+    ],
+    "SEYKM": [
+      "stale"
+    ],
+    "SILVR": [
+      "stale"
+    ],
+    "SISE": [
+      "stale"
+    ],
+    "SKBNK": [
+      "stale"
+    ],
+    "SKTAS": [
+      "stale"
+    ],
+    "SKYLP": [
+      "stale"
+    ],
+    "SKYMD": [
+      "stale"
+    ],
+    "SMART": [
+      "stale"
+    ],
+    "SMRTG": [
+      "stale"
+    ],
+    "SMRVA": [
+      "stale"
+    ],
+    "SNGYO": [
+      "stale"
+    ],
+    "SNICA": [
+      "stale"
+    ],
+    "SNPAM": [
+      "stale"
+    ],
+    "SODSN": [
+      "stale"
+    ],
+    "SOHOE": [
+      "stale"
+    ],
+    "SOKE": [
+      "stale"
+    ],
+    "SOKM": [
+      "stale"
+    ],
+    "SONME": [
+      "stale"
+    ],
+    "SRVGY": [
+      "stale"
+    ],
+    "SSAAT": [
+      "stale"
+    ],
+    "SUMAS": [
+      "stale"
+    ],
+    "SUNTK": [
+      "stale"
+    ],
+    "SURGY": [
+      "stale"
+    ],
+    "SUWEN": [
+      "stale"
+    ],
+    "SVGYO": [
+      "stale"
+    ],
+    "TABGD": [
+      "stale"
+    ],
+    "TARKM": [
+      "stale"
+    ],
+    "TATEN": [
+      "stale"
+    ],
+    "TATGD": [
+      "stale"
+    ],
+    "TAVHL": [
+      "stale"
+    ],
+    "TBORG": [
+      "stale"
+    ],
+    "TCELL": [
+      "stale"
+    ],
+    "TCKRC": [
+      "stale"
+    ],
+    "TDGYO": [
+      "stale"
+    ],
+    "TEHOL": [
+      "stale"
+    ],
+    "TEKTU": [
+      "stale"
+    ],
+    "TEZOL": [
+      "stale"
+    ],
+    "TGSAS": [
+      "stale"
+    ],
+    "THYAO": [
+      "stale"
+    ],
+    "TKFEN": [
+      "stale"
+    ],
+    "TKNKA": [
+      "stale"
+    ],
+    "TKNSA": [
+      "stale"
+    ],
+    "TLMAN": [
+      "stale"
+    ],
+    "TMPOL": [
+      "stale"
+    ],
+    "TMSN": [
+      "stale"
+    ],
+    "TNZTP": [
+      "stale"
+    ],
+    "TOASO": [
+      "stale"
+    ],
+    "TRALT": [
+      "stale"
+    ],
+    "TRCAS": [
+      "stale"
+    ],
+    "TRENJ": [
+      "stale"
+    ],
+    "TRGYO": [
+      "stale"
+    ],
+    "TRHOL": [
+      "stale"
+    ],
+    "TRILC": [
+      "stale"
+    ],
+    "TRMET": [
+      "stale"
+    ],
+    "TSGYO": [
+      "stale"
+    ],
+    "TSKB": [
+      "stale"
+    ],
+    "TSPOR": [
+      "stale"
+    ],
+    "TTKOM": [
+      "stale"
+    ],
+    "TTRAK": [
+      "stale"
+    ],
+    "TUCLK": [
+      "stale"
+    ],
+    "TUKAS": [
+      "stale"
+    ],
+    "TUPRS": [
+      "stale"
+    ],
+    "TUREX": [
+      "stale"
+    ],
+    "TURGG": [
+      "stale"
+    ],
+    "TURSG": [
+      "stale"
+    ],
+    "UCAYM": [
+      "stale"
+    ],
+    "UFUK": [
+      "stale"
+    ],
+    "ULAS": [
+      "stale"
+    ],
+    "ULKER": [
+      "stale"
+    ],
+    "ULUSE": [
+      "stale"
+    ],
+    "ULUUN": [
+      "stale"
+    ],
+    "UNLU": [
+      "stale"
+    ],
+    "USAK": [
+      "stale"
+    ],
+    "USHOL": [
+      "stale"
+    ],
+    "VAKBN": [
+      "stale"
+    ],
+    "VAKFA": [
+      "stale"
+    ],
+    "VAKFN": [
+      "stale"
+    ],
+    "VAKKO": [
+      "stale"
+    ],
+    "VANGD": [
+      "stale"
+    ],
+    "VBTYZ": [
+      "stale"
+    ],
+    "VERTU": [
+      "stale"
+    ],
+    "VERUS": [
+      "stale"
+    ],
+    "VESBE": [
+      "stale"
+    ],
+    "VESTL": [
+      "stale"
+    ],
+    "VEYAS": [
+      "stale"
+    ],
+    "VKFYO": [
+      "stale"
+    ],
+    "VKGYO": [
+      "stale"
+    ],
+    "VKING": [
+      "stale"
+    ],
+    "VRGYO": [
+      "stale"
+    ],
+    "VSNMD": [
+      "stale"
+    ],
+    "YAPRK": [
+      "stale"
+    ],
+    "YATAS": [
+      "stale"
+    ],
+    "YAYLA": [
+      "stale"
+    ],
+    "YBTAS": [
+      "stale"
+    ],
+    "YEOTK": [
+      "stale"
+    ],
+    "YESIL": [
+      "stale"
+    ],
+    "YGGYO": [
+      "stale"
+    ],
+    "YIGIT": [
+      "stale"
+    ],
+    "YKBNK": [
+      "stale"
+    ],
+    "YKSLN": [
+      "stale"
+    ],
+    "YONGA": [
+      "stale"
+    ],
+    "YUNSA": [
+      "stale"
+    ],
+    "YYAPI": [
+      "stale"
+    ],
+    "YYLGD": [
+      "stale"
+    ],
+    "ZEDUR": [
+      "stale"
+    ],
+    "ZERGY": [
+      "stale"
+    ],
+    "ZGYO": [
+      "stale"
+    ],
+    "ZOREN": [
+      "stale"
+    ],
+    "ZRGYO": [
+      "stale"
+    ]
+  },
+  "reasons": {
+    "low_liquidity": 3,
+    "quarantined": 626
+  },
+  "session": "2026-11-18",
+  "tickers": 629,
+  "training_allowed": false
+}
