@@ -64,6 +64,16 @@ def test_empty_download_marks_fetch_failed_and_continues(tmp_path):
     assert len(store.read_prices("GARAN")) == 1
 
 
+def test_stored_ticker_missing_from_download_is_fetch_failed(tmp_path):
+    # Regression: this crashed the whole job on 2026-11-18 (RangeIndex vs Timestamp).
+    store = Store(tmp_path)
+    store.write_prices("THYAO", bars(["2026-11-11", "2026-11-12"]))
+    store.write_prices("GARAN", bars(["2026-11-11", "2026-11-12"]))
+    recorder = Recorder({"GARAN.IS": bars(["2026-11-12", "2026-11-13"])})
+    statuses = update_prices(store, ["THYAO", "GARAN"], SESSION, download=recorder)
+    assert statuses == {"THYAO": "fetch_failed", "GARAN": "updated"}
+
+
 def test_downloader_exception_marks_batch_failed(tmp_path):
     def broken(symbols, start, end):
         raise RuntimeError("yahoo down")
