@@ -1,0 +1,68 @@
+# .github/workflows/yahoo_probe.yml
+# TEMPORARY measurement: every half hour, ask Yahoo whether it already serves the
+# last completed BIST session (tools/yahoo_probe.py) and append the answer to
+# probe/yahoo_probe.csv on the `probe` branch. On 2026-11-18..20 the daily run,
+# queued to ~04:20 TRT, got no data for the previous session; this finds the
+# hours in which Yahoo serves nothing. Stops by itself after 2026-11-25;
+# delete this file and the `probe` branch once the result is in.
+name: Yahoo probe
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: yahoo-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: Europe/Istanbul
+      PYTHONUNBUFFERED: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Still measuring?
+        id: window
+        run: |
+          if [ "$(date +%F)" \< "2026-11-26" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/checkout@v4
+        if: steps.window.outputs.run == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.window.outputs.run == 'true'
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-data.txt
+
+      - name: Install
+        if: steps.window.outputs.run == 'true'
+        run: python -m pip install "pandas<3" yfinance "exchange-calendars==4.13.2"
+
+      - name: Probe and commit
+        if: steps.window.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin probe >/dev/null; then
+            git fetch --depth 1 origin probe:refs/remotes/origin/probe
+            git worktree add probe origin/probe
+            git -C probe switch -C probe
+          else
+            git worktree add --detach probe
+            git -C probe switch --orphan probe
+          fi
+          python tools/yahoo_probe.py probe/yahoo_probe.csv | tee -a "$GITHUB_STEP_SUMMARY"
+          cd probe
+          git add yahoo_probe.csv
+          git commit --quiet -m "probe: $(date '+%F %H:%M')"
+          git push origin HEAD:probe
