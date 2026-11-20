@@ -6,9 +6,14 @@ name: Daily BIST Data
 
 on:
   schedule:
-    # 19:30 UTC = 22:30 TRT, weekdays. Late enough for Is Yatirim to have
-    # published the session close used by the cross-check.
-    - cron: "30 19 * * 1-5"
+    # GitHub's free scheduler queues jobs, often by hours (2026-11-18..20: the
+    # 22:30 run started around 04:20 TRT), and at that hour Yahoo did not serve
+    # the previous session yet. So the daily work has three slots; the first
+    # that completes it wins and the later ones stop after a status check.
+    # Off-minute times avoid the busiest :00/:30 marks.
+    - cron: "47 19 * * 1-5"   # 22:47 TRT, Mon-Fri sessions
+    - cron: "17 21 * * 1-5"   # 00:17 TRT, second evening attempt
+    - cron: "17 6 * * 2-6"    # 09:17 TRT next morning, last attempt before the open
     # 07:00 UTC = 10:00 TRT, Saturdays: recipe search.
     - cron: "0 7 * * 6"
   workflow_dispatch:
@@ -58,6 +63,13 @@ jobs:
             if [ "${{ github.event.schedule }}" = "0 7 * * 6" ]; then MODE=search; else MODE=daily; fi
           fi
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          # The morning slot is the last chance and a manual run is deliberate:
+          # both send a message even when the day could not be completed.
+          if [ "${{ github.event.schedule }}" = "17 6 * * 2-6" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "last_attempt=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "last_attempt=false" >> "$GITHUB_OUTPUT"
+          fi
           echo "Mode: $MODE"
 
       - name: Checkout data branch (create it when missing)
@@ -88,8 +100,22 @@ jobs:
       - name: Run unit tests
         run: python -m pytest tests/jarvis -q
 
-      - name: Update data
+      - name: Already done today?
+        id: before
         if: steps.mode.outputs.mode == 'daily'
+        run: |
+          set -euo pipefail
+          python -m jarvis.status --data-dir data | tee -a "$GITHUB_OUTPUT"
+          # A scheduled slot after a successful one has nothing to do.
+          if grep -q '^done=true' "$GITHUB_OUTPUT" && [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Daily work for this session is already done; nothing to do." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update data
+        if: steps.mode.outputs.mode == 'daily' && steps.before.outputs.skip != 'true'
         run: |
           set -euo pipefail
           LIMIT="${{ github.event.inputs.limit }}"
@@ -106,7 +132,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Train and predict
-        if: steps.mode.outputs.mode == 'daily'
+        if: steps.mode.outputs.mode == 'daily' && steps.before.outputs.skip != 'true'
         run: |
           set -euo pipefail
           python -m jarvis.train --data-dir data | tee train.json
@@ -155,8 +181,19 @@ jobs:
           git commit --quiet -m "data: $(date +%F) (${{ steps.mode.outputs.mode }})"
           git push origin HEAD:data
 
+      - name: Result ready?
+        id: after
+        if: steps.mode.outputs.mode == 'daily' && steps.before.outputs.skip != 'true'
+        run: python -m jarvis.status --data-dir data | tee -a "$GITHUB_OUTPUT"
+
+      # Message only when the day produced a result, or on the last attempt
+      # (then it says why there is none). Earlier failed slots stay silent.
       - name: Send Telegram message
-        if: steps.mode.outputs.mode == 'daily' && github.event.inputs.notify != 'false'
+        if: >-
+          steps.mode.outputs.mode == 'daily'
+          && steps.before.outputs.skip != 'true'
+          && github.event.inputs.notify != 'false'
+          && (steps.after.outputs.done == 'true' || steps.mode.outputs.last_attempt == 'true')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
