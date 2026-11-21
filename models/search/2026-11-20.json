@@ -1,0 +1,604 @@
+{
+  "candidates": 18,
+  "challenger_exam": {
+    "days": 60,
+    "hit_rate": 0.5666666666666667,
+    "hit_rate_open": 0.5666666666666667,
+    "mean_bottom_excess": -0.03288939754669054,
+    "mean_quintile_spread": 0.031661318335228505,
+    "mean_rank_ic": 0.2060328154698606,
+    "mean_top_excess": 0.0067854439958437976,
+    "mean_top_excess_open": 0.005374224497779521,
+    "mean_top_vs_universe": 0.016289829241454976,
+    "mean_universe_excess": -0.007504385245611176,
+    "quintile_spread_win_rate": 0.85
+  },
+  "challenger_recipe_id": "1c0fcbb0ca",
+  "champion_exam": {
+    "days": 60,
+    "hit_rate": 0.48333333333333334,
+    "hit_rate_open": 0.4666666666666667,
+    "mean_bottom_excess": -0.025747498723180332,
+    "mean_quintile_spread": 0.01561322178293661,
+    "mean_rank_ic": 0.09679194737727585,
+    "mean_top_excess": 0.0016328119656060579,
+    "mean_top_excess_open": -0.00027744381234356177,
+    "mean_top_vs_universe": 0.011137197211217234,
+    "mean_universe_excess": -0.007504385245611176,
+    "quintile_spread_win_rate": 0.75
+  },
+  "champion_recipe_id": "001bde800d",
+  "confirmation": {
+    "days": 130,
+    "ok": false,
+    "quintile_spread_diff": -0.0018112393224871527,
+    "rank_ic_diff": 0.02078816668887894,
+    "top_excess_diff": -0.006059701149936752,
+    "window": [
+      "2025-11-14",
+      "2026-05-22"
+    ]
+  },
+  "exam": {
+    "days": 60,
+    "p_pick": 1.0,
+    "p_rank_ic": 1.0,
+    "pick_diff": 0.0160480965522919,
+    "pick_metric": "quintile_spread",
+    "promote": true,
+    "rank_ic_diff": 0.10924086809258478,
+    "top_excess_diff": 0.005152632030237741
+  },
+  "promoted": false,
+  "session": "2026-11-20",
+  "status": "ok",
+  "trials": [
+    {
+      "feature_set": "v1",
+      "features": 24,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "fda322eefe",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.43333333333333335,
+        "hit_rate_open": 0.4166666666666667,
+        "mean_bottom_excess": -0.02163008963967315,
+        "mean_quintile_spread": 0.0098695925849082,
+        "mean_rank_ic": 0.1002905496793802,
+        "mean_top_excess": -0.003349560015975987,
+        "mean_top_excess_open": -0.004534547753497871,
+        "mean_top_vs_universe": 0.00606235723530849,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.7333333333333333
+      },
+      "target": "cs_median",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v1",
+      "features": 24,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "91e3679870",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5333333333333333,
+        "hit_rate_open": 0.5,
+        "mean_bottom_excess": -0.025318307869397205,
+        "mean_quintile_spread": 0.011404168487301889,
+        "mean_rank_ic": 0.08793477920980206,
+        "mean_top_excess": -0.0009836802247575219,
+        "mean_top_excess_open": -0.0027137150911028278,
+        "mean_top_vs_universe": 0.008428237026526956,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.7666666666666667
+      },
+      "target": "risk_adjusted",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v2",
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "6293327b15",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.55,
+        "hit_rate_open": 0.5166666666666667,
+        "mean_bottom_excess": -0.02320740790407443,
+        "mean_quintile_spread": 0.010808822580156722,
+        "mean_rank_ic": 0.08849259032229172,
+        "mean_top_excess": 0.004650706800929953,
+        "mean_top_excess_open": 0.002972061536298536,
+        "mean_top_vs_universe": 0.01406262405221443,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.7833333333333333
+      },
+      "target": "sign",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v2",
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "7795495e95",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.4,
+        "hit_rate_open": 0.36666666666666664,
+        "mean_bottom_excess": -0.02675620185557138,
+        "mean_quintile_spread": 0.00898195546742679,
+        "mean_rank_ic": 0.10195395453881505,
+        "mean_top_excess": -0.001437842301532802,
+        "mean_top_excess_open": -0.0022405620584354607,
+        "mean_top_vs_universe": 0.007974074949751674,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.6666666666666666
+      },
+      "target": "cs_median",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v2",
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "89e48498b2",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5166666666666667,
+        "hit_rate_open": 0.5,
+        "mean_bottom_excess": -0.02497161199134326,
+        "mean_quintile_spread": 0.010686052139429782,
+        "mean_rank_ic": 0.0870843785867202,
+        "mean_top_excess": -0.00022365601080122136,
+        "mean_top_excess_open": -0.00109649593678184,
+        "mean_top_vs_universe": 0.009188261240483256,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.7166666666666667
+      },
+      "target": "risk_adjusted",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v3",
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "854bef0d22",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.4166666666666667,
+        "hit_rate_open": 0.38333333333333336,
+        "mean_bottom_excess": -0.025694490324168248,
+        "mean_quintile_spread": 0.008950470957615152,
+        "mean_rank_ic": 0.09347687895054396,
+        "mean_top_excess": -0.002410784223964785,
+        "mean_top_excess_open": -0.0030159769698591523,
+        "mean_top_vs_universe": 0.007001133027319693,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.7166666666666667
+      },
+      "target": "sign",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v3",
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "1c0fcbb0ca",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.4166666666666667,
+        "hit_rate_open": 0.35,
+        "mean_bottom_excess": -0.02952769750353045,
+        "mean_quintile_spread": 0.010782443356621199,
+        "mean_rank_ic": 0.10798004115697654,
+        "mean_top_excess": -0.0033453628565832294,
+        "mean_top_excess_open": -0.003723342542188884,
+        "mean_top_vs_universe": 0.006066554394701248,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.7
+      },
+      "target": "cs_median",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v3",
+      "features": 33,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "e335209ccd",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.45,
+        "hit_rate_open": 0.43333333333333335,
+        "mean_bottom_excess": -0.02461121613770349,
+        "mean_quintile_spread": 0.012038588399847974,
+        "mean_rank_ic": 0.0961759907665159,
+        "mean_top_excess": -0.008404554862539949,
+        "mean_top_excess_open": -0.00870431317176967,
+        "mean_top_vs_universe": 0.0010073623887445293,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.7333333333333333
+      },
+      "target": "risk_adjusted",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v4",
+      "features": 19,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "11fb2a3ef9",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.5166666666666667,
+        "hit_rate_open": 0.5,
+        "mean_bottom_excess": -0.025582724125962623,
+        "mean_quintile_spread": 0.009171300075307701,
+        "mean_rank_ic": 0.09038033489039607,
+        "mean_top_excess": 0.003599899186690423,
+        "mean_top_excess_open": 0.0018728703999142623,
+        "mean_top_vs_universe": 0.013011816437974904,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.65
+      },
+      "target": "sign",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v4",
+      "features": 19,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "57ab0205f6",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.4666666666666667,
+        "hit_rate_open": 0.4666666666666667,
+        "mean_bottom_excess": -0.028704899803081062,
+        "mean_quintile_spread": 0.009891798260883017,
+        "mean_rank_ic": 0.10498403474107135,
+        "mean_top_excess": -0.00407171702528405,
+        "mean_top_excess_open": -0.004274916988533148,
+        "mean_top_vs_universe": 0.005340200226000428,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.6833333333333333
+      },
+      "target": "cs_median",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v4",
+      "features": 19,
+      "params": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 4,
+        "min_child_weight": 3.0,
+        "n_estimators": 300,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "subsample": 0.8
+      },
+      "recipe_id": "dfeadfdd39",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.43333333333333335,
+        "hit_rate_open": 0.43333333333333335,
+        "mean_bottom_excess": -0.028195390231057032,
+        "mean_quintile_spread": 0.00923129207004313,
+        "mean_rank_ic": 0.08929831456602148,
+        "mean_top_excess": -0.004586733379286941,
+        "mean_top_excess_open": -0.00547333950434159,
+        "mean_top_vs_universe": 0.004825183871997535,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.6833333333333333
+      },
+      "target": "risk_adjusted",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v3",
+      "features": 33,
+      "params": {
+        "colsample_bylevel": 0.9700474045376555,
+        "colsample_bytree": 0.7646335475579331,
+        "learning_rate": 0.06814419790625978,
+        "max_depth": 5,
+        "min_child_weight": 3.360376697106443,
+        "n_estimators": 550,
+        "reg_alpha": 0.3991483008772959,
+        "reg_lambda": 0.10427098783266198,
+        "subsample": 0.861156139778742
+      },
+      "recipe_id": "149d47b1b8",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.4166666666666667,
+        "hit_rate_open": 0.45,
+        "mean_bottom_excess": -0.022716269695363497,
+        "mean_quintile_spread": 0.007617032953129667,
+        "mean_rank_ic": 0.07073986824742147,
+        "mean_top_excess": -0.0028448082637894164,
+        "mean_top_excess_open": -0.0045082169479152895,
+        "mean_top_vs_universe": 0.006567108987495061,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.6333333333333333
+      },
+      "target": "risk_adjusted",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v1",
+      "features": 24,
+      "params": {
+        "colsample_bylevel": 0.9017292543102293,
+        "colsample_bytree": 0.684260476823552,
+        "learning_rate": 0.023420514266664978,
+        "max_depth": 5,
+        "min_child_weight": 2.629191998569149,
+        "n_estimators": 500,
+        "reg_alpha": 0.17649878681500142,
+        "reg_lambda": 1.7392397161176862,
+        "subsample": 0.9434552117019361
+      },
+      "recipe_id": "8101eafd0f",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.4,
+        "hit_rate_open": 0.4166666666666667,
+        "mean_bottom_excess": -0.028852613502246844,
+        "mean_quintile_spread": 0.010588637590330147,
+        "mean_rank_ic": 0.10143541671703989,
+        "mean_top_excess": -0.0032841321072767495,
+        "mean_top_excess_open": -0.005220073342838052,
+        "mean_top_vs_universe": 0.006127785144007729,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.6833333333333333
+      },
+      "target": "cs_median",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v4",
+      "features": 19,
+      "params": {
+        "colsample_bylevel": 0.9531781871889686,
+        "colsample_bytree": 0.8652558929455951,
+        "learning_rate": 0.010123420024348042,
+        "max_depth": 7,
+        "min_child_weight": 4.159693373199497,
+        "n_estimators": 550,
+        "reg_alpha": 0.6610465514062834,
+        "reg_lambda": 1.479504114049406,
+        "subsample": 0.981491591991548
+      },
+      "recipe_id": "1aed095e67",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.55,
+        "hit_rate_open": 0.5666666666666667,
+        "mean_bottom_excess": -0.023466128878408654,
+        "mean_quintile_spread": 0.008399501457592062,
+        "mean_rank_ic": 0.08805969554005086,
+        "mean_top_excess": -0.0028667139466746396,
+        "mean_top_excess_open": -0.003369553752064336,
+        "mean_top_vs_universe": 0.006545203304609838,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.6833333333333333
+      },
+      "target": "risk_adjusted",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v3",
+      "features": 33,
+      "params": {
+        "colsample_bylevel": 0.6344580558238195,
+        "colsample_bytree": 0.9059755854335072,
+        "learning_rate": 0.057250785780848905,
+        "max_depth": 7,
+        "min_child_weight": 1.7842600077520068,
+        "n_estimators": 450,
+        "reg_alpha": 0.5235368051329548,
+        "reg_lambda": 1.274050260797403,
+        "subsample": 0.9537799625659378
+      },
+      "recipe_id": "fc7fbe6cf5",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.4666666666666667,
+        "hit_rate_open": 0.43333333333333335,
+        "mean_bottom_excess": -0.020020335661837377,
+        "mean_quintile_spread": 0.006355507192095057,
+        "mean_rank_ic": 0.06405590884073668,
+        "mean_top_excess": -0.003482121612898424,
+        "mean_top_excess_open": -0.005027687070348217,
+        "mean_top_vs_universe": 0.005929795638386055,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.6333333333333333
+      },
+      "target": "risk_adjusted",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v1",
+      "features": 24,
+      "params": {
+        "colsample_bylevel": 0.8310210556134345,
+        "colsample_bytree": 0.8020678179170431,
+        "learning_rate": 0.01544519855194825,
+        "max_depth": 5,
+        "min_child_weight": 2.4453632361654702,
+        "n_estimators": 650,
+        "reg_alpha": 0.9446772507205965,
+        "reg_lambda": 1.887349649402902,
+        "subsample": 0.9391839503178046
+      },
+      "recipe_id": "38396f5f8d",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.45,
+        "hit_rate_open": 0.45,
+        "mean_bottom_excess": -0.028772532487264905,
+        "mean_quintile_spread": 0.011836912784314682,
+        "mean_rank_ic": 0.0950742368637827,
+        "mean_top_excess": -0.0007392608508343714,
+        "mean_top_excess_open": -0.0031446907730805582,
+        "mean_top_vs_universe": 0.008672656400450106,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.7833333333333333
+      },
+      "target": "risk_adjusted",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v2",
+      "features": 33,
+      "params": {
+        "colsample_bylevel": 0.9475755946542281,
+        "colsample_bytree": 0.82871965338535,
+        "learning_rate": 0.014581631041741362,
+        "max_depth": 4,
+        "min_child_weight": 1.2564685932430395,
+        "n_estimators": 200,
+        "reg_alpha": 0.7073138168629163,
+        "reg_lambda": 1.2882435238673318,
+        "subsample": 0.6244188706765236
+      },
+      "recipe_id": "26608bbeb3",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.45,
+        "hit_rate_open": 0.45,
+        "mean_bottom_excess": -0.019462825303508423,
+        "mean_quintile_spread": 0.010952757435682215,
+        "mean_rank_ic": 0.07934603291756201,
+        "mean_top_excess": -0.0012359072392408952,
+        "mean_top_excess_open": -0.0026548455730133124,
+        "mean_top_vs_universe": 0.008176010012043582,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.6833333333333333
+      },
+      "target": "sign",
+      "train_years": 3
+    },
+    {
+      "feature_set": "v2",
+      "features": 33,
+      "params": {
+        "colsample_bylevel": 0.8303877582320961,
+        "colsample_bytree": 0.7165990362877297,
+        "learning_rate": 0.05916290678480346,
+        "max_depth": 6,
+        "min_child_weight": 2.6908519897257523,
+        "n_estimators": 650,
+        "reg_alpha": 0.019951455740869206,
+        "reg_lambda": 0.30364072020236144,
+        "subsample": 0.971338043245463
+      },
+      "recipe_id": "d884577faa",
+      "selection": {
+        "days": 60,
+        "hit_rate": 0.43333333333333335,
+        "hit_rate_open": 0.4,
+        "mean_bottom_excess": -0.016514465405305132,
+        "mean_quintile_spread": 0.00810151619956592,
+        "mean_rank_ic": 0.07264609219465838,
+        "mean_top_excess": -0.002975400486741268,
+        "mean_top_excess_open": -0.004815361093127428,
+        "mean_top_vs_universe": 0.00643651676454321,
+        "mean_universe_excess": -0.0074119172512844755,
+        "quintile_spread_win_rate": 0.7
+      },
+      "target": "cs_median",
+      "train_years": 3
+    }
+  ]
+}

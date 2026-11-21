@@ -1,52 +1,59 @@
 {
-  "as_of": "2026-11-16",
+  "as_of": "2026-11-20",
   "calibration": [
     {
       "bucket": "0.50-0.55",
-      "count": 6498,
-      "hit_rate": 0.4667590027700831
+      "count": 6002,
+      "hit_rate": 0.4730089970009997
     },
     {
       "bucket": "0.55-0.60",
-      "count": 1216,
-      "hit_rate": 0.43256578947368424
+      "count": 1296,
+      "hit_rate": 0.44598765432098764
     },
     {
       "bucket": "0.60+",
-      "count": 167,
-      "hit_rate": 0.40119760479041916
+      "count": 230,
+      "hit_rate": 0.41739130434782606
     }
   ],
   "kind": "simulated",
   "note": "Geçmişe dönük ileriye yürütme; gerçek işlem sonucu değildir.",
-  "pending": 422,
+  "pending": 461,
   "recipe_id": "001bde800d",
   "top5_net_of_cost": {
     "days": 245,
-    "hit_rate": 0.46938775510204084,
-    "mean_rank_ic": 0.0783416992053833,
-    "mean_top_excess": 0.0004485395037609584
+    "hit_rate": 0.47346938775510206,
+    "hit_rate_open": 0.47346938775510206,
+    "mean_bottom_excess": -0.01885282204140333,
+    "mean_quintile_spread": 0.01008837954458352,
+    "mean_rank_ic": 0.07601883443677851,
+    "mean_top_excess": 0.0015368377937536976,
+    "mean_top_excess_open": 0.0007868438770624454,
+    "mean_top_vs_universe": 0.008230001277137638,
+    "mean_universe_excess": -0.004693163483383937,
+    "quintile_spread_win_rate": 0.6979591836734694
   },
   "windows": {
     "20": {
       "days": 15,
-      "hit_rate": 0.4266666666666667,
-      "mean_excess": 1.7831060949982104e-05,
-      "mean_rank_ic": 0.029661951367797663,
+      "hit_rate": 0.49333333333333335,
+      "mean_excess": 0.0018480676890245684,
+      "mean_rank_ic": 0.02884663433280948,
       "recommendations": 75
     },
     "60": {
       "days": 55,
-      "hit_rate": 0.5127272727272727,
-      "mean_excess": 0.003591876077900452,
-      "mean_rank_ic": 0.10211618410782977,
+      "hit_rate": 0.5054545454545455,
+      "mean_excess": 0.0008159933789933304,
+      "mean_rank_ic": 0.08932964574219082,
       "recommendations": 275
     },
     "all": {
       "days": 245,
-      "hit_rate": 0.4742857142857143,
-      "mean_excess": 0.00244853950376096,
-      "mean_rank_ic": 0.0783416992053833,
+      "hit_rate": 0.48081632653061224,
+      "mean_excess": 0.0035368377937536983,
+      "mean_rank_ic": 0.07601883443677851,
       "recommendations": 1225
     }
   }
