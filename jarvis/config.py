@@ -23,6 +23,13 @@ QUALITY_WINDOW = 20            # recent sessions inspected by the quality checks
 SOURCE_LAG_RATIO = 0.5
 LAG_RETRIES = 3
 LAG_WAIT_SECONDS = 15 * 60
+# Yahoo also drops the previous session for some hours after midnight UTC
+# (2026-11-21: present 03:08 TRT, gone 03:58-06:13, back by 10:38), and GitHub's
+# queue often starts the evening job right in that gap. The price job then keeps
+# retrying until this hour (TRT) of the day after the session, within a cap that
+# keeps the whole job under GitHub's six-hour limit.
+LAG_DEADLINE_HOUR = 11
+LAG_MAX_WAIT_SECONDS = 285 * 60
 
 # Eligibility (manipulation filter).
 MIN_HISTORY_SESSIONS = 252

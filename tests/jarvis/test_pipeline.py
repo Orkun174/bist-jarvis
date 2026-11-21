@@ -7,7 +7,7 @@ import pytest
 from jarvis.calendar import sessions_until
 from jarvis.config import OHLCV
 from jarvis.exclusions import COLUMNS, empty_exclusions
-from jarvis.pipeline import LAG_RETRIES, LAG_WAIT_SECONDS, run
+from jarvis.pipeline import LAG_RETRIES, LAG_WAIT_SECONDS, lag_retries, run
 from jarvis.store import Store
 from jarvis.universe import UniverseError
 
@@ -185,7 +185,22 @@ def test_source_lag_waits_and_retries_until_the_session_arrives(tmp_path):
 def test_source_lag_that_never_clears_is_reported(tmp_path):
     waits = []
     execute(tmp_path, download=lagging_download(99), wait=waits.append)
-    assert waits == [LAG_WAIT_SECONDS] * LAG_RETRIES
+    assert waits == [LAG_WAIT_SECONDS] * lag_retries(pd.Timestamp("2026-11-13"), AS_OF)
     report = read_quality(tmp_path)
     assert report["source_lag"] is True
     assert len(report["quarantined"]) == 4
+
+
+def trt(text):
+    return pd.Timestamp(text, tz="Europe/Istanbul")
+
+
+def test_lag_waits_last_until_the_morning_deadline_within_the_job_cap():
+    friday = pd.Timestamp("2026-11-20")
+    # Evening and night runs: the deadline is far, the job cap (285 min) decides.
+    assert lag_retries(friday, trt("2026-11-20 22:47")) == 19
+    assert lag_retries(friday, trt("2026-11-21 03:58")) == 19
+    # Morning run: only until 11:00 TRT.
+    assert lag_retries(friday, trt("2026-11-21 09:17")) == 6
+    # Past the deadline (weekend catch-up): the old minimum still applies.
+    assert lag_retries(friday, trt("2026-11-22 10:00")) == LAG_RETRIES
