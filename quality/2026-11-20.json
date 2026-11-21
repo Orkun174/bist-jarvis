@@ -236,7 +236,6 @@
     "EYGYO",
     "FADE",
     "FENER",
-    "FLAP",
     "FMIZP",
     "FONET",
     "FORMT",
@@ -1556,8 +1555,8 @@
       "fetch_failed"
     ],
     "FLAP": [
-      "stale",
-      "fetch_failed"
+      "suspect_jump",
+      "cross_check_mismatch"
     ],
     "FMIZP": [
       "stale",
