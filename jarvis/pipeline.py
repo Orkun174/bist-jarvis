@@ -19,7 +19,10 @@ from typing import Callable
 import pandas as pd
 
 from jarvis.calendar import last_completed_session, sessions_until
-from jarvis.config import LAG_RETRIES, LAG_WAIT_SECONDS, QUALITY_WINDOW, SOURCE_LAG_RATIO
+from jarvis.config import (
+    LAG_DEADLINE_HOUR, LAG_MAX_WAIT_SECONDS, LAG_RETRIES, LAG_WAIT_SECONDS, QUALITY_WINDOW,
+    SOURCE_LAG_RATIO, TRT,
+)
 from jarvis.eligibility import eligibility_today
 from jarvis.exclusions import COLUMNS, load_exclusions
 from jarvis.measures import fetch_exclusions
@@ -79,6 +82,14 @@ def _source_lagging(store: Store, tickers: list[str], session: pd.Timestamp) -> 
     return missing > SOURCE_LAG_RATIO * len(tickers)
 
 
+def lag_retries(session: pd.Timestamp, now: pd.Timestamp) -> int:
+    """How many waits for a lagging Yahoo: until the morning deadline, at least LAG_RETRIES."""
+    deadline = (pd.Timestamp(session).normalize() + pd.Timedelta(days=1, hours=LAG_DEADLINE_HOUR))
+    budget = min((deadline.tz_localize(TRT) - now.tz_convert(TRT)).total_seconds(),
+                 LAG_MAX_WAIT_SECONDS)
+    return max(LAG_RETRIES, int(budget // LAG_WAIT_SECONDS))
+
+
 def run(
     data_dir: Path | str,
     as_of: pd.Timestamp | None = None,
@@ -100,12 +111,13 @@ def run(
     LOG.info("Seans %s: %d hisse için fiyatlar güncelleniyor.", session.date(), len(tickers))
     statuses = update_prices(store, tickers, session, download=download)
     source_lag = _source_lagging(store, tickers, session)
-    for attempt in range(LAG_RETRIES):
+    retries = lag_retries(session, pd.Timestamp.now(tz=TRT) if as_of is None else pd.Timestamp(as_of))
+    for attempt in range(retries):
         if not source_lag:
             break
         LOG.warning(
             "Yahoo %s seansını henüz yayınlamamış görünüyor; %d dk sonra yeniden denenecek (%d/%d).",
-            session.date(), LAG_WAIT_SECONDS // 60, attempt + 1, LAG_RETRIES,
+            session.date(), LAG_WAIT_SECONDS // 60, attempt + 1, retries,
         )
         wait(LAG_WAIT_SECONDS)
         # Tickers that already have the session are "current" and are not downloaded again.

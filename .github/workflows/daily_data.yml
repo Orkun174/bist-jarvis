@@ -6,16 +6,20 @@ name: Daily BIST Data
 
 on:
   schedule:
-    # GitHub's free scheduler queues jobs, often by hours (2026-11-18..20: the
-    # 22:30 run started around 04:20 TRT), and at that hour Yahoo did not serve
-    # the previous session yet. So the daily work has three slots; the first
-    # that completes it wins and the later ones stop after a status check.
-    # Off-minute times avoid the busiest :00/:30 marks.
+    # GitHub's free scheduler queues jobs by hours (2026-11-21: 22:47 and 00:17
+    # started at 03:58 and 05:25 TRT) and sometimes drops them altogether (the
+    # 09:17 and Saturday slots that day never ran). Yahoo meanwhile drops the
+    # previous session for some hours after midnight UTC. So the daily work has
+    # several slots; the first that completes it wins, later ones stop after a
+    # status check, and a run that lands in Yahoo's gap waits it out
+    # (jarvis.config.LAG_DEADLINE_HOUR). Off-minute times avoid busy :00/:30 marks.
     - cron: "47 19 * * 1-5"   # 22:47 TRT, Mon-Fri sessions
     - cron: "17 21 * * 1-5"   # 00:17 TRT, second evening attempt
     - cron: "17 6 * * 2-6"    # 09:17 TRT next morning, last attempt before the open
-    # 07:00 UTC = 10:00 TRT, Saturdays: recipe search.
+    # 10:00 TRT Saturday, Sunday as backup: completes Friday if it is still
+    # missing, then the weekly recipe search (once per week).
     - cron: "0 7 * * 6"
+    - cron: "0 7 * * 0"
   workflow_dispatch:
     inputs:
       mode:
@@ -42,8 +46,9 @@ concurrency:
 jobs:
   daily-data:
     runs-on: ubuntu-latest
-    # Up to 45 min waiting for Yahoo prices plus 45 for macro series (jarvis/config.py).
-    timeout-minutes: 120
+    # Up to 285 min waiting for Yahoo prices plus 45 for macro series
+    # (jarvis/config.py), under GitHub's 360-minute job limit.
+    timeout-minutes: 355
 
     env:
       TZ: Europe/Istanbul
@@ -60,7 +65,10 @@ jobs:
         run: |
           MODE="${{ github.event.inputs.mode }}"
           if [ -z "$MODE" ]; then
-            if [ "${{ github.event.schedule }}" = "0 7 * * 6" ]; then MODE=search; else MODE=daily; fi
+            case "${{ github.event.schedule }}" in
+              "0 7 * * 6"|"0 7 * * 0") MODE=search ;;
+              *) MODE=daily ;;
+            esac
           fi
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           # The morning slot is the last chance and a manual run is deliberate:
@@ -100,14 +108,16 @@ jobs:
       - name: Run unit tests
         run: python -m pytest tests/jarvis -q
 
+      # Search mode runs the daily work first when the last session is still
+      # missing (the weekend catch-up for a Friday the scheduler dropped).
       - name: Already done today?
         id: before
-        if: steps.mode.outputs.mode == 'daily'
+        if: steps.mode.outputs.mode == 'daily' || steps.mode.outputs.mode == 'search'
         run: |
           set -euo pipefail
           python -m jarvis.status --data-dir data | tee -a "$GITHUB_OUTPUT"
           # A scheduled slot after a successful one has nothing to do.
-          if grep -q '^done=true' "$GITHUB_OUTPUT" && [ "${{ github.event_name }}" = "schedule" ]; then
+          if grep -q '^done=true' "$GITHUB_OUTPUT" && { [ "${{ github.event_name }}" = "schedule" ] || [ "${{ steps.mode.outputs.mode }}" = "search" ]; }; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "Daily work for this session is already done; nothing to do." >> "$GITHUB_STEP_SUMMARY"
           else
@@ -115,7 +125,7 @@ jobs:
           fi
 
       - name: Update data
-        if: steps.mode.outputs.mode == 'daily' && steps.before.outputs.skip != 'true'
+        if: (steps.mode.outputs.mode == 'daily' || steps.mode.outputs.mode == 'search') && steps.before.outputs.skip != 'true'
         run: |
           set -euo pipefail
           LIMIT="${{ github.event.inputs.limit }}"
@@ -132,7 +142,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Train and predict
-        if: steps.mode.outputs.mode == 'daily' && steps.before.outputs.skip != 'true'
+        if: (steps.mode.outputs.mode == 'daily' || steps.mode.outputs.mode == 'search') && steps.before.outputs.skip != 'true'
         run: |
           set -euo pipefail
           python -m jarvis.train --data-dir data | tee train.json
@@ -159,6 +169,11 @@ jobs:
         if: steps.mode.outputs.mode == 'search'
         run: |
           set -euo pipefail
+          # The Sunday backup has nothing to do when Saturday already searched.
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -f "data/models/search/${{ steps.before.outputs.session }}.json" ]; then
+            echo "Recipe search for ${{ steps.before.outputs.session }} already done." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           python -m jarvis.train --data-dir data --search | tee search.json
           {
             echo '### Recipe search'
@@ -183,17 +198,27 @@ jobs:
 
       - name: Result ready?
         id: after
-        if: steps.mode.outputs.mode == 'daily' && steps.before.outputs.skip != 'true'
-        run: python -m jarvis.status --data-dir data | tee -a "$GITHUB_OUTPUT"
+        if: (steps.mode.outputs.mode == 'daily' || steps.mode.outputs.mode == 'search') && steps.before.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          python -m jarvis.status --data-dir data | tee -a "$GITHUB_OUTPUT"
+          # A run that is still without a result in the morning or daytime has
+          # waited out Yahoo's gap in vain; later slots may never come (GitHub
+          # drops some), so it says why there is no result.
+          HOUR=$((10#$(date +%H)))
+          if grep -q '^done=false' "$GITHUB_OUTPUT" && [ "$HOUR" -ge 8 ] && [ "$HOUR" -lt 18 ]; then
+            echo "gave_up=true" >> "$GITHUB_OUTPUT"
+          fi
 
-      # Message only when the day produced a result, or on the last attempt
-      # (then it says why there is none). Earlier failed slots stay silent.
+      # Message only when the day produced a result, or when no later slot is
+      # to be counted on (then it says why there is none). Earlier failed
+      # evening slots stay silent.
       - name: Send Telegram message
         if: >-
-          steps.mode.outputs.mode == 'daily'
+          (steps.mode.outputs.mode == 'daily' || steps.mode.outputs.mode == 'search')
           && steps.before.outputs.skip != 'true'
           && github.event.inputs.notify != 'false'
-          && (steps.after.outputs.done == 'true' || steps.mode.outputs.last_attempt == 'true')
+          && (steps.after.outputs.done == 'true' || steps.mode.outputs.last_attempt == 'true' || steps.after.outputs.gave_up == 'true')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
