@@ -1,15 +1,45 @@
 {
-  "bottom": [],
-  "eligible": 0,
+  "bottom": [
+    {
+      "prob": 0.3189,
+      "rank": 95,
+      "ticker": "AYDEM"
+    },
+    {
+      "prob": 0.3239,
+      "rank": 94,
+      "ticker": "TUKAS"
+    },
+    {
+      "prob": 0.3364,
+      "rank": 93,
+      "ticker": "SOKM"
+    },
+    {
+      "prob": 0.3382,
+      "rank": 92,
+      "ticker": "DOAS"
+    },
+    {
+      "prob": 0.3402,
+      "rank": 91,
+      "ticker": "KATMR"
+    }
+  ],
+  "eligible": 95,
   "model": {
     "checks": {
       "data": {
-        "ok": false,
-        "quarantine_ratio": 0.995231
+        "ok": true,
+        "quarantine_ratio": 0.006359
+      },
+      "drift": {
+        "ok": true,
+        "rank_corr": 0.9377235283001699
       },
       "health": {
-        "days": 119,
-        "mean_rank_ic": 0.08563024954068854,
+        "days": 120,
+        "mean_rank_ic": 0.08698645589998,
         "ok": true
       },
       "rows": {
@@ -17,12 +47,88 @@
         "train_rows": 126685
       }
     },
-    "model_id": "2026-11-16-001bde800d",
+    "model_id": "2026-11-20-001bde800d",
     "recipe_id": "001bde800d",
-    "retrained": false,
-    "weights_changed": false
+    "retrained": true,
+    "weights_changed": true
   },
-  "recommendations": [],
+  "recommendations": [
+    {
+      "prob": 0.4555,
+      "rank": 1,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        },
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        }
+      ],
+      "ticker": "DOCO"
+    },
+    {
+      "prob": 0.4548,
+      "rank": 2,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "PGSUS"
+    },
+    {
+      "prob": 0.4522,
+      "rank": 3,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "OTKAR"
+    },
+    {
+      "prob": 0.4513,
+      "rank": 4,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "VAKBN"
+    },
+    {
+      "prob": 0.4492,
+      "rank": 5,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        },
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        }
+      ],
+      "ticker": "THYAO"
+    }
+  ],
   "scorecard_live": {
     "days": 0,
     "hit_rate": null,
@@ -31,5 +137,56 @@
     "recommendations": 0
   },
   "session": "2026-11-20",
-  "top": []
+  "top": [
+    {
+      "prob": 0.4555,
+      "rank": 1,
+      "ticker": "DOCO"
+    },
+    {
+      "prob": 0.4548,
+      "rank": 2,
+      "ticker": "PGSUS"
+    },
+    {
+      "prob": 0.4522,
+      "rank": 3,
+      "ticker": "OTKAR"
+    },
+    {
+      "prob": 0.4513,
+      "rank": 4,
+      "ticker": "VAKBN"
+    },
+    {
+      "prob": 0.4492,
+      "rank": 5,
+      "ticker": "THYAO"
+    },
+    {
+      "prob": 0.4488,
+      "rank": 6,
+      "ticker": "RGYAS"
+    },
+    {
+      "prob": 0.4476,
+      "rank": 7,
+      "ticker": "BIOEN"
+    },
+    {
+      "prob": 0.4473,
+      "rank": 8,
+      "ticker": "KCHOL"
+    },
+    {
+      "prob": 0.4461,
+      "rank": 9,
+      "ticker": "TSPOR"
+    },
+    {
+      "prob": 0.4433,
+      "rank": 10,
+      "ticker": "GSRAY"
+    }
+  ]
 }

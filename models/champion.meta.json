@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-17T02:37:12+00:00",
+  "created_at": "2026-11-21T14:39:15+00:00",
   "feature_version": "jarvis-features-v1",
-  "model_id": "2026-11-16-001bde800d",
+  "model_id": "2026-11-20-001bde800d",
   "recipe": {
     "features": [
       "EMA20_Distance",
@@ -42,6 +42,6 @@
     "train_years": 3
   },
   "recipe_id": "001bde800d",
-  "train_rows": 126481,
-  "trained_through": "2026-11-05"
+  "train_rows": 126685,
+  "trained_through": "2026-11-11"
 }
