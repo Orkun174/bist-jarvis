@@ -18,28 +18,28 @@
     }
   ],
   "kind": "live",
-  "pending": 184,
+  "pending": 95,
   "windows": {
     "20": {
-      "days": 0,
-      "hit_rate": null,
-      "mean_excess": null,
-      "mean_rank_ic": null,
-      "recommendations": 0
+      "days": 1,
+      "hit_rate": 0.6,
+      "mean_excess": 0.01707557550926937,
+      "mean_rank_ic": 0.3588796343224295,
+      "recommendations": 5
     },
     "60": {
-      "days": 0,
-      "hit_rate": null,
-      "mean_excess": null,
-      "mean_rank_ic": null,
-      "recommendations": 0
+      "days": 1,
+      "hit_rate": 0.6,
+      "mean_excess": 0.01707557550926937,
+      "mean_rank_ic": 0.3588796343224295,
+      "recommendations": 5
     },
     "all": {
-      "days": 0,
-      "hit_rate": null,
-      "mean_excess": null,
-      "mean_rank_ic": null,
-      "recommendations": 0
+      "days": 1,
+      "hit_rate": 0.6,
+      "mean_excess": 0.01707557550926937,
+      "mean_rank_ic": 0.3588796343224295,
+      "recommendations": 5
     }
   }
 }

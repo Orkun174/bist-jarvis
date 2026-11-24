@@ -1,15 +1,45 @@
 {
-  "bottom": [],
-  "eligible": 0,
+  "bottom": [
+    {
+      "prob": 0.3045,
+      "rank": 89,
+      "ticker": "HUNER"
+    },
+    {
+      "prob": 0.3242,
+      "rank": 88,
+      "ticker": "DOAS"
+    },
+    {
+      "prob": 0.3531,
+      "rank": 87,
+      "ticker": "OBAMS"
+    },
+    {
+      "prob": 0.3606,
+      "rank": 86,
+      "ticker": "TUKAS"
+    },
+    {
+      "prob": 0.3676,
+      "rank": 85,
+      "ticker": "ENJSA"
+    }
+  ],
+  "eligible": 89,
   "model": {
     "checks": {
       "data": {
-        "ok": false,
-        "quarantine_ratio": 0.995231
+        "ok": true,
+        "quarantine_ratio": 0.009539
+      },
+      "drift": {
+        "ok": true,
+        "rank_corr": 0.6293326523663604
       },
       "health": {
-        "days": 119,
-        "mean_rank_ic": 0.09294007439583785,
+        "days": 120,
+        "mean_rank_ic": 0.09159767146050696,
         "ok": true
       },
       "rows": {
@@ -17,19 +47,146 @@
         "train_rows": 126597
       }
     },
-    "model_id": "2026-11-20-001bde800d",
+    "model_id": "2026-11-23-001bde800d",
     "recipe_id": "001bde800d",
-    "retrained": false,
-    "weights_changed": false
+    "retrained": true,
+    "weights_changed": true
   },
-  "recommendations": [],
+  "recommendations": [
+    {
+      "prob": 0.4821,
+      "rank": 1,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "Volume_Surge"
+        }
+      ],
+      "ticker": "MGROS"
+    },
+    {
+      "prob": 0.4779,
+      "rank": 2,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "AKBNK"
+    },
+    {
+      "prob": 0.4778,
+      "rank": 3,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "down",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "KRDMA"
+    },
+    {
+      "prob": 0.4766,
+      "rank": 4,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "Volume_Surge"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "RGYAS"
+    },
+    {
+      "prob": 0.4724,
+      "rank": 5,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "Volume_Surge"
+        }
+      ],
+      "ticker": "GSRAY"
+    }
+  ],
   "scorecard_live": {
-    "days": 0,
-    "hit_rate": null,
-    "mean_excess": null,
-    "mean_rank_ic": null,
-    "recommendations": 0
+    "days": 1,
+    "hit_rate": 0.6,
+    "mean_excess": 0.01707557550926937,
+    "mean_rank_ic": 0.3588796343224295,
+    "recommendations": 5
   },
   "session": "2026-11-23",
-  "top": []
+  "top": [
+    {
+      "prob": 0.4821,
+      "rank": 1,
+      "ticker": "MGROS"
+    },
+    {
+      "prob": 0.4779,
+      "rank": 2,
+      "ticker": "AKBNK"
+    },
+    {
+      "prob": 0.4778,
+      "rank": 3,
+      "ticker": "KRDMA"
+    },
+    {
+      "prob": 0.4766,
+      "rank": 4,
+      "ticker": "RGYAS"
+    },
+    {
+      "prob": 0.4724,
+      "rank": 5,
+      "ticker": "GSRAY"
+    },
+    {
+      "prob": 0.4667,
+      "rank": 6,
+      "ticker": "GLYHO"
+    },
+    {
+      "prob": 0.4654,
+      "rank": 7,
+      "ticker": "TRENJ"
+    },
+    {
+      "prob": 0.4652,
+      "rank": 8,
+      "ticker": "KCHOL"
+    },
+    {
+      "prob": 0.4651,
+      "rank": 9,
+      "ticker": "GARAN"
+    },
+    {
+      "prob": 0.462,
+      "rank": 10,
+      "ticker": "TAVHL"
+    }
+  ]
 }
