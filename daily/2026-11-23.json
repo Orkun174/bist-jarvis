@@ -1,0 +1,35 @@
+{
+  "bottom": [],
+  "eligible": 0,
+  "model": {
+    "checks": {
+      "data": {
+        "ok": false,
+        "quarantine_ratio": 0.995231
+      },
+      "health": {
+        "days": 119,
+        "mean_rank_ic": 0.09294007439583785,
+        "ok": true
+      },
+      "rows": {
+        "ok": true,
+        "train_rows": 126597
+      }
+    },
+    "model_id": "2026-11-20-001bde800d",
+    "recipe_id": "001bde800d",
+    "retrained": false,
+    "weights_changed": false
+  },
+  "recommendations": [],
+  "scorecard_live": {
+    "days": 0,
+    "hit_rate": null,
+    "mean_excess": null,
+    "mean_rank_ic": null,
+    "recommendations": 0
+  },
+  "session": "2026-11-23",
+  "top": []
+}
