@@ -1,0 +1,192 @@
+{
+  "bottom": [
+    {
+      "prob": 0.3105,
+      "rank": 86,
+      "ticker": "ISMEN"
+    },
+    {
+      "prob": 0.32,
+      "rank": 85,
+      "ticker": "TUKAS"
+    },
+    {
+      "prob": 0.3204,
+      "rank": 84,
+      "ticker": "SOKM"
+    },
+    {
+      "prob": 0.3248,
+      "rank": 83,
+      "ticker": "DOAS"
+    },
+    {
+      "prob": 0.3379,
+      "rank": 82,
+      "ticker": "AKFYE"
+    }
+  ],
+  "eligible": 86,
+  "model": {
+    "checks": {
+      "data": {
+        "ok": true,
+        "quarantine_ratio": 0.006359
+      },
+      "drift": {
+        "ok": true,
+        "rank_corr": 0.8658427284305863
+      },
+      "health": {
+        "days": 120,
+        "mean_rank_ic": 0.0866193292921451,
+        "ok": true
+      },
+      "rows": {
+        "ok": true,
+        "train_rows": 126623
+      }
+    },
+    "model_id": "2026-11-24-001bde800d",
+    "recipe_id": "001bde800d",
+    "retrained": true,
+    "weights_changed": true
+  },
+  "recommendations": [
+    {
+      "prob": 0.4228,
+      "rank": 1,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "MACD_Normalized"
+        }
+      ],
+      "ticker": "METRO"
+    },
+    {
+      "prob": 0.4134,
+      "rank": 2,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "EMA20_Distance"
+        }
+      ],
+      "ticker": "TABGD"
+    },
+    {
+      "prob": 0.4125,
+      "rank": 3,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "THYAO"
+    },
+    {
+      "prob": 0.4112,
+      "rank": 4,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ADX_14"
+        }
+      ],
+      "ticker": "ODAS"
+    },
+    {
+      "prob": 0.4079,
+      "rank": 5,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "GARAN"
+    }
+  ],
+  "scorecard_live": {
+    "days": 1,
+    "hit_rate": 0.6,
+    "mean_excess": 0.01707557550926937,
+    "mean_rank_ic": 0.3588796343224295,
+    "recommendations": 5
+  },
+  "session": "2026-11-24",
+  "top": [
+    {
+      "prob": 0.4228,
+      "rank": 1,
+      "ticker": "METRO"
+    },
+    {
+      "prob": 0.4134,
+      "rank": 2,
+      "ticker": "TABGD"
+    },
+    {
+      "prob": 0.4125,
+      "rank": 3,
+      "ticker": "THYAO"
+    },
+    {
+      "prob": 0.4112,
+      "rank": 4,
+      "ticker": "ODAS"
+    },
+    {
+      "prob": 0.4079,
+      "rank": 5,
+      "ticker": "GARAN"
+    },
+    {
+      "prob": 0.4066,
+      "rank": 6,
+      "ticker": "MGROS"
+    },
+    {
+      "prob": 0.4063,
+      "rank": 7,
+      "ticker": "TRGYO"
+    },
+    {
+      "prob": 0.4055,
+      "rank": 8,
+      "ticker": "AGHOL"
+    },
+    {
+      "prob": 0.4054,
+      "rank": 9,
+      "ticker": "BIOEN"
+    },
+    {
+      "prob": 0.3984,
+      "rank": 10,
+      "ticker": "TCELL"
+    }
+  ]
+}
