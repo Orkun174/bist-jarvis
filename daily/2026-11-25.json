@@ -1,0 +1,192 @@
+{
+  "bottom": [
+    {
+      "prob": 0.3345,
+      "rank": 84,
+      "ticker": "TUKAS"
+    },
+    {
+      "prob": 0.3506,
+      "rank": 83,
+      "ticker": "DOFRB"
+    },
+    {
+      "prob": 0.3573,
+      "rank": 82,
+      "ticker": "OBAMS"
+    },
+    {
+      "prob": 0.3639,
+      "rank": 81,
+      "ticker": "DOAS"
+    },
+    {
+      "prob": 0.3665,
+      "rank": 80,
+      "ticker": "SOKM"
+    }
+  ],
+  "eligible": 84,
+  "model": {
+    "checks": {
+      "data": {
+        "ok": true,
+        "quarantine_ratio": 0.007949
+      },
+      "drift": {
+        "ok": true,
+        "rank_corr": 0.9603118355776047
+      },
+      "health": {
+        "days": 120,
+        "mean_rank_ic": 0.103709702900893,
+        "ok": true
+      },
+      "rows": {
+        "ok": true,
+        "train_rows": 126641
+      }
+    },
+    "model_id": "2026-11-25-001bde800d",
+    "recipe_id": "001bde800d",
+    "retrained": true,
+    "weights_changed": true
+  },
+  "recommendations": [
+    {
+      "prob": 0.5078,
+      "rank": 1,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "TRGYO"
+    },
+    {
+      "prob": 0.5043,
+      "rank": 2,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "TCELL"
+    },
+    {
+      "prob": 0.503,
+      "rank": 3,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "GARAN"
+    },
+    {
+      "prob": 0.5019,
+      "rank": 4,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "MGROS"
+    },
+    {
+      "prob": 0.5019,
+      "rank": 5,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "AGESA"
+    }
+  ],
+  "scorecard_live": {
+    "days": 1,
+    "hit_rate": 0.6,
+    "mean_excess": 0.01707557550926937,
+    "mean_rank_ic": 0.3588796343224295,
+    "recommendations": 5
+  },
+  "session": "2026-11-25",
+  "top": [
+    {
+      "prob": 0.5078,
+      "rank": 1,
+      "ticker": "TRGYO"
+    },
+    {
+      "prob": 0.5043,
+      "rank": 2,
+      "ticker": "TCELL"
+    },
+    {
+      "prob": 0.503,
+      "rank": 3,
+      "ticker": "GARAN"
+    },
+    {
+      "prob": 0.5019,
+      "rank": 4,
+      "ticker": "MGROS"
+    },
+    {
+      "prob": 0.5019,
+      "rank": 5,
+      "ticker": "AGESA"
+    },
+    {
+      "prob": 0.5002,
+      "rank": 6,
+      "ticker": "ENKAI"
+    },
+    {
+      "prob": 0.4997,
+      "rank": 7,
+      "ticker": "AEFES"
+    },
+    {
+      "prob": 0.4994,
+      "rank": 8,
+      "ticker": "AKBNK"
+    },
+    {
+      "prob": 0.4955,
+      "rank": 9,
+      "ticker": "PGSUS"
+    },
+    {
+      "prob": 0.4948,
+      "rank": 10,
+      "ticker": "ENERY"
+    }
+  ]
+}
