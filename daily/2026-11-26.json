@@ -1,0 +1,192 @@
+{
+  "bottom": [
+    {
+      "prob": 0.4415,
+      "rank": 85,
+      "ticker": "TUKAS"
+    },
+    {
+      "prob": 0.4561,
+      "rank": 84,
+      "ticker": "HEKTS"
+    },
+    {
+      "prob": 0.4666,
+      "rank": 83,
+      "ticker": "OBAMS"
+    },
+    {
+      "prob": 0.4726,
+      "rank": 82,
+      "ticker": "FONET"
+    },
+    {
+      "prob": 0.4761,
+      "rank": 81,
+      "ticker": "ATATP"
+    }
+  ],
+  "eligible": 85,
+  "model": {
+    "checks": {
+      "data": {
+        "ok": true,
+        "quarantine_ratio": 0.006359
+      },
+      "drift": {
+        "ok": true,
+        "rank_corr": 0.8659957006058238
+      },
+      "health": {
+        "days": 120,
+        "mean_rank_ic": 0.09687918671481571,
+        "ok": true
+      },
+      "rows": {
+        "ok": true,
+        "train_rows": 126724
+      }
+    },
+    "model_id": "2026-11-26-001bde800d",
+    "recipe_id": "001bde800d",
+    "retrained": true,
+    "weights_changed": true
+  },
+  "recommendations": [
+    {
+      "prob": 0.5605,
+      "rank": 1,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "TSKB"
+    },
+    {
+      "prob": 0.5557,
+      "rank": 2,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "OYAKC"
+    },
+    {
+      "prob": 0.5547,
+      "rank": 3,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "AEFES"
+    },
+    {
+      "prob": 0.5531,
+      "rank": 4,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "TCELL"
+    },
+    {
+      "prob": 0.5468,
+      "rank": 5,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ATR_Normalized"
+        }
+      ],
+      "ticker": "TRGYO"
+    }
+  ],
+  "scorecard_live": {
+    "days": 1,
+    "hit_rate": 0.6,
+    "mean_excess": 0.01707557550926937,
+    "mean_rank_ic": 0.3588796343224295,
+    "recommendations": 5
+  },
+  "session": "2026-11-26",
+  "top": [
+    {
+      "prob": 0.5605,
+      "rank": 1,
+      "ticker": "TSKB"
+    },
+    {
+      "prob": 0.5557,
+      "rank": 2,
+      "ticker": "OYAKC"
+    },
+    {
+      "prob": 0.5547,
+      "rank": 3,
+      "ticker": "AEFES"
+    },
+    {
+      "prob": 0.5531,
+      "rank": 4,
+      "ticker": "TCELL"
+    },
+    {
+      "prob": 0.5468,
+      "rank": 5,
+      "ticker": "TRGYO"
+    },
+    {
+      "prob": 0.5466,
+      "rank": 6,
+      "ticker": "AKBNK"
+    },
+    {
+      "prob": 0.5429,
+      "rank": 7,
+      "ticker": "EKGYO"
+    },
+    {
+      "prob": 0.5415,
+      "rank": 8,
+      "ticker": "GARAN"
+    },
+    {
+      "prob": 0.5397,
+      "rank": 9,
+      "ticker": "AGESA"
+    },
+    {
+      "prob": 0.5381,
+      "rank": 10,
+      "ticker": "FROTO"
+    }
+  ]
+}
