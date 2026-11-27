@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-11-26",
+  "as_of": "2026-11-27",
   "calibration": [
     {
       "bucket": "0.50-0.55",
@@ -18,28 +18,28 @@
     }
   ],
   "kind": "live",
-  "pending": 354,
+  "pending": 344,
   "windows": {
     "20": {
-      "days": 1,
-      "hit_rate": 0.6,
-      "mean_excess": 0.01707557550926937,
-      "mean_rank_ic": 0.3588796343224295,
-      "recommendations": 5
+      "days": 2,
+      "hit_rate": 0.4,
+      "mean_excess": -0.004326554463799859,
+      "mean_rank_ic": 0.14876011853386203,
+      "recommendations": 10
     },
     "60": {
-      "days": 1,
-      "hit_rate": 0.6,
-      "mean_excess": 0.01707557550926937,
-      "mean_rank_ic": 0.3588796343224295,
-      "recommendations": 5
+      "days": 2,
+      "hit_rate": 0.4,
+      "mean_excess": -0.004326554463799859,
+      "mean_rank_ic": 0.14876011853386203,
+      "recommendations": 10
     },
     "all": {
-      "days": 1,
-      "hit_rate": 0.6,
-      "mean_excess": 0.01707557550926937,
-      "mean_rank_ic": 0.3588796343224295,
-      "recommendations": 5
+      "days": 2,
+      "hit_rate": 0.4,
+      "mean_excess": -0.004326554463799859,
+      "mean_rank_ic": 0.14876011853386203,
+      "recommendations": 10
     }
   }
 }

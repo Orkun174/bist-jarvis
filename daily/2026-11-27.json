@@ -1,0 +1,192 @@
+{
+  "bottom": [
+    {
+      "prob": 0.3861,
+      "rank": 84,
+      "ticker": "DOAS"
+    },
+    {
+      "prob": 0.4206,
+      "rank": 83,
+      "ticker": "TUKAS"
+    },
+    {
+      "prob": 0.4297,
+      "rank": 82,
+      "ticker": "BRYAT"
+    },
+    {
+      "prob": 0.4363,
+      "rank": 81,
+      "ticker": "CCOLA"
+    },
+    {
+      "prob": 0.4368,
+      "rank": 80,
+      "ticker": "ULKER"
+    }
+  ],
+  "eligible": 84,
+  "model": {
+    "checks": {
+      "data": {
+        "ok": true,
+        "quarantine_ratio": 0.007949
+      },
+      "drift": {
+        "ok": true,
+        "rank_corr": 0.8311413500187306
+      },
+      "health": {
+        "days": 120,
+        "mean_rank_ic": 0.09821773105091706,
+        "ok": true
+      },
+      "rows": {
+        "ok": true,
+        "train_rows": 126806
+      }
+    },
+    "model_id": "2026-11-27-001bde800d",
+    "recipe_id": "001bde800d",
+    "retrained": true,
+    "weights_changed": true
+  },
+  "recommendations": [
+    {
+      "prob": 0.5523,
+      "rank": 1,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "ADX_14"
+        }
+      ],
+      "ticker": "ODAS"
+    },
+    {
+      "prob": 0.5509,
+      "rank": 2,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "EMA20_Distance"
+        }
+      ],
+      "ticker": "AKBNK"
+    },
+    {
+      "prob": 0.5457,
+      "rank": 3,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "EMA20_Distance"
+        }
+      ],
+      "ticker": "AGHOL"
+    },
+    {
+      "prob": 0.5329,
+      "rank": 4,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "EMA50_Distance"
+        }
+      ],
+      "ticker": "ECILC"
+    },
+    {
+      "prob": 0.5326,
+      "rank": 5,
+      "reasons": [
+        {
+          "direction": "up",
+          "feature": "CMF_20"
+        },
+        {
+          "direction": "up",
+          "feature": "MACD_Normalized"
+        }
+      ],
+      "ticker": "BIOEN"
+    }
+  ],
+  "scorecard_live": {
+    "days": 2,
+    "hit_rate": 0.4,
+    "mean_excess": -0.004326554463799859,
+    "mean_rank_ic": 0.14876011853386203,
+    "recommendations": 10
+  },
+  "session": "2026-11-27",
+  "top": [
+    {
+      "prob": 0.5523,
+      "rank": 1,
+      "ticker": "ODAS"
+    },
+    {
+      "prob": 0.5509,
+      "rank": 2,
+      "ticker": "AKBNK"
+    },
+    {
+      "prob": 0.5457,
+      "rank": 3,
+      "ticker": "AGHOL"
+    },
+    {
+      "prob": 0.5329,
+      "rank": 4,
+      "ticker": "ECILC"
+    },
+    {
+      "prob": 0.5326,
+      "rank": 5,
+      "ticker": "BIOEN"
+    },
+    {
+      "prob": 0.5318,
+      "rank": 6,
+      "ticker": "CANTE"
+    },
+    {
+      "prob": 0.5303,
+      "rank": 7,
+      "ticker": "BJKAS"
+    },
+    {
+      "prob": 0.5261,
+      "rank": 8,
+      "ticker": "TRENJ"
+    },
+    {
+      "prob": 0.5259,
+      "rank": 9,
+      "ticker": "MOGAN"
+    },
+    {
+      "prob": 0.5256,
+      "rank": 10,
+      "ticker": "ALTNY"
+    }
+  ]
+}
